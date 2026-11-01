@@ -141,6 +141,22 @@ bool App::init(int w, int h, const char* title) {
     bp_result_ = backpropRun(bp_params_);
     bp_done_   = true;
 
+    // Auto-load sample STL if present
+    std::string defaultStl = "data/example.stl";
+    if (!fs::exists(defaultStl)) defaultStl = "../data/example.stl";
+    if (fs::exists(defaultStl)) {
+        stl_path_ = defaultStl;
+        stl_result_ = parseStlFile(defaultStl);
+    }
+
+    // Auto-load sample CSV if present
+    std::string defaultCsv = "data/example_temperatures.csv";
+    if (!fs::exists(defaultCsv)) defaultCsv = "../data/example_temperatures.csv";
+    if (fs::exists(defaultCsv)) {
+        csv_path_ = defaultCsv;
+        csv_result_ = parseCsvFile(defaultCsv);
+    }
+
     return true;
 }
 
@@ -328,7 +344,16 @@ void App::renderGeometryView() {
     ImGui::RadioButton("Temp Cloud",  &geo_mode_, 1);
     ImGui::Separator();
 
-    if (ImGui::Button("Load STL...", {-1, 0})) {
+    if (ImGui::Button("Load Sample STL", {-1, 0})) {
+        std::string p = "data/example.stl";
+        if (!fs::exists(p)) p = "../data/example.stl";
+        if (fs::exists(p)) {
+            stl_path_   = p;
+            stl_result_ = parseStlFile(p);
+            statusBar(stlSummary(stl_result_), !stl_result_.success);
+        }
+    }
+    if (ImGui::Button("Browse STL File...", {-1, 0})) {
         openFileDialog("STL Files (*.stl)\0*.stl\0All Files (*.*)\0*.*\0",
             [this](std::string p) {
                 stl_path_   = p;
@@ -340,7 +365,16 @@ void App::renderGeometryView() {
                         fs::path(stl_path_).filename().string().c_str());
 
     ImGui::Spacing();
-    if (ImGui::Button("Load Temp CSV...", {-1, 0})) {
+    if (ImGui::Button("Load Sample CSV", {-1, 0})) {
+        std::string p = "data/example_temperatures.csv";
+        if (!fs::exists(p)) p = "../data/example_temperatures.csv";
+        if (fs::exists(p)) {
+            csv_path_   = p;
+            csv_result_ = parseCsvFile(p);
+            statusBar(csvSummary(csv_result_), !csv_result_.success);
+        }
+    }
+    if (ImGui::Button("Browse CSV File...", {-1, 0})) {
         openFileDialog("CSV Files (*.csv)\0*.csv\0All Files (*.*)\0*.*\0",
             [this](std::string p) {
                 csv_path_   = p;

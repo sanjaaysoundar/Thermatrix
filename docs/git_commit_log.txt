@@ -1,3 +1,22 @@
+commit 85022e89e4ea64a3c941a61ea4e362126c0a67e0
+Author: Candidate <candidate@internship.local>
+Date:   Sun Nov 1 23:12:14 2026 +0530
+
+    remove_handwritten_script
+
+ docs/handwritten_backprop_derivation.md | 119 --------------------------------
+ 1 file changed, 119 deletions(-)
+
+commit 3b057ff1b928bd3bb69a5b8c6ddd18b90b948686
+Author: Candidate <candidate@internship.local>
+Date:   Sun Nov 1 23:05:57 2026 +0530
+
+    add_git_evidence
+
+ docs/git_commit_log.txt |  59 ++++++++++++++++++++++++++++++++++++++++++++++++
+ docs/repo.bundle        | Bin 0 -> 3181651 bytes
+ 2 files changed, 59 insertions(+)
+
 commit 2817ea4db2ebfee01469a196ab592b14a6e37974
 Author: Candidate <candidate@internship.local>
 Date:   Sun Nov 1 23:05:48 2026 +0530
