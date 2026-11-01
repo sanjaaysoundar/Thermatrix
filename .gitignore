@@ -1,0 +1,12 @@
+# Build artifacts
+build/
+CMakeFiles/
+*.obj
+*.o
+*.a
+*.pdb
+
+# IDE temporary files
+.vscode/.browse*
+*.tmp
+*.log
