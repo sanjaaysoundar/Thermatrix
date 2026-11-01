@@ -1,0 +1,59 @@
+commit 2817ea4db2ebfee01469a196ab592b14a6e37974
+Author: Candidate <candidate@internship.local>
+Date:   Sun Nov 1 23:05:48 2026 +0530
+
+    initial_complete_thermatrix
+
+ .gitignore                              |   12 +
+ .vscode/launch.json                     |   27 +
+ .vscode/tasks.json                      |   25 +
+ CMakeLists.txt                          |  129 ++++
+ DEPENDENCIES.md                         |   94 +++
+ Launch.bat                              |    7 +
+ Launch.exe                              |  Bin 0 -> 559679 bytes
+ README.md                               |  158 +++++
+ bin/THERMATRIX.exe                      |  Bin 0 -> 7331880 bytes
+ bin/data/example.stl                    |   86 +++
+ bin/data/example_temperatures.csv       |   56 ++
+ bin/glfw3.dll                           |  Bin 0 -> 333500 bytes
+ bin/libgcc_s_seh-1.dll                  |  Bin 0 -> 149364 bytes
+ bin/libgomp-1.dll                       |  Bin 0 -> 328648 bytes
+ bin/libstdc++-6.dll                     |  Bin 0 -> 2659216 bytes
+ bin/libwinpthread-1.dll                 |  Bin 0 -> 73020 bytes
+ bin/test_backprop.exe                   |  Bin 0 -> 52157 bytes
+ bin/test_benchmark.exe                  |  Bin 0 -> 88693 bytes
+ bin/test_csv_parser.exe                 |  Bin 0 -> 119158 bytes
+ bin/test_fem_solver.exe                 |  Bin 0 -> 62383 bytes
+ bin/test_stl_parser.exe                 |  Bin 0 -> 115411 bytes
+ data/example.stl                        |   86 +++
+ data/example_temperatures.csv           |   56 ++
+ docs/ai_use_log.md                      |   55 ++
+ docs/block_diagram.md                   |  230 +++++++
+ docs/handwritten_backprop_derivation.md |  119 ++++
+ docs/report.md                          |  167 +++++
+ docs/screenshots/.gitkeep               |    1 +
+ external/imgui                          |    1 +
+ external/implot                         |    1 +
+ results/benchmark_results.csv           |   27 +
+ src/app/App.cpp                         | 1082 +++++++++++++++++++++++++++++++
+ src/app/App.h                           |  106 +++
+ src/core/BackpropSolver.cpp             |  136 ++++
+ src/core/BackpropSolver.h               |   76 +++
+ src/core/BenchmarkEngine.cpp            |  283 ++++++++
+ src/core/BenchmarkEngine.h              |   96 +++
+ src/core/CsvParser.cpp                  |  164 +++++
+ src/core/CsvParser.h                    |   54 ++
+ src/core/FemSolver.cpp                  |  198 ++++++
+ src/core/FemSolver.h                    |   67 ++
+ src/core/HardwareMock.cpp               |  182 ++++++
+ src/core/HardwareMock.h                 |  166 +++++
+ src/core/StlParser.cpp                  |  228 +++++++
+ src/core/StlParser.h                    |   53 ++
+ src/launcher.cpp                        |   23 +
+ src/main.cpp                            |   24 +
+ tests/test_backprop.cpp                 |  128 ++++
+ tests/test_benchmark.cpp                |  133 ++++
+ tests/test_csv_parser.cpp               |  153 +++++
+ tests/test_fem_solver.cpp               |  129 ++++
+ tests/test_stl_parser.cpp               |  164 +++++
+ 52 files changed, 4982 insertions(+)
