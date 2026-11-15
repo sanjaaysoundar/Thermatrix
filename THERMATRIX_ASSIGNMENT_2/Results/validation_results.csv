@@ -1,15 +1,15 @@
 section,metric,solver_or_pair,value_1,value_2,value_3,consensus_ref,spread_or_error,threshold,status
-Consensus_Tmax,Extrapolated_and_Consensus,FEM_FDM_FVM,nan,nan,nan,60.8134,0 C spread,< 3.0 C,PASS
-Consensus_Tmax,CrossCheck_Finer_FEM,FEM_Finer,60.8134,,,60.8134,0 C diff,< 3.0 C,PASS
-Consensus_Tavg,Extrapolated_and_Consensus,FEM_FDM_FVM,nan,56.1584,nan,56.1584,0 C spread,< 1.5 C,PASS
-Consensus_Tavg,CrossCheck_Finer_FEM,FEM_Finer,56.5704,,,56.1584,0.412007 C diff,< 1.5 C,PASS
+Consensus_Tmax,Extrapolated_and_Consensus,FEM_FDM_FVM,nan,nan,nan,NaN,UNAVAILABLE (no method monotonic),consensus unavailable,UNAVAILABLE
+Consensus_Tmax,CrossCheck_Finer_FEM,FEM_Finer,60.8134,,,NaN,60.8134 C (separate cross-check),cross-check only,INFO
+Consensus_Tavg,SingleMethod_Extrapolation,FDM,nan,56.1584,nan,NaN,56.1584 C (single-method FDM extrap; consensus UNAVAILABLE),single-method,INFO
+Consensus_Tavg,CrossCheck_Finer_FEM,FEM_Finer,56.5704,,,NaN,56.5704 C (separate cross-check),cross-check only,INFO
 Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FDM,0.415642,,,0.0,0.415642 C,< 3.0 C,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FVM,0.249764,,,0.0,0.249764 C,< 3.0 C,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FDM_vs_FVM,0.545928,,,0.0,0.545928 C,< 3.0 C,PASS
-Consensus_RMSE,RMSE_vs_Consensus,FEM (barycentric),0.137473,,,0.0,0.137473 C,< 2.0 C,PASS
-Consensus_RMSE,RMSE_vs_Consensus,FDM (trilinear),0.314527,,,0.0,0.314527 C,< 2.5 C,PASS
-Consensus_RMSE,RMSE_vs_Consensus,FVM (cell+Green-Gauss),0.244902,,,0.0,0.244902 C,< 2.0 C,PASS
-Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer (barycentric),0.136213,,,0.0,0.136213 C,< 2.0 C,PASS
+Consensus_RMSE,RMSE_vs_Consensus,FEM (barycentric),0.103101,,,0.0,0.103101 C,< 2.0 C,PASS
+Consensus_RMSE,RMSE_vs_Consensus,FDM (trilinear),0.305658,,,0.0,0.305658 C,< 2.5 C,PASS
+Consensus_RMSE,RMSE_vs_Consensus,FVM (cell+Green-Gauss),0.193994,,,0.0,0.193994 C,< 2.0 C,PASS
+Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer (barycentric),0.102999,,,0.0,0.102999 C,< 2.0 C,PASS
 1D_Slab,L2_Relative_Error,FEM,1.49337e-11,,,0.0,1.49337e-09%,< 1.0%,PASS
 1D_Slab,L2_Relative_Error,FDM,5.38737e-11,,,0.0,5.38737e-09%,< 1.0%,PASS
 1D_Slab,L2_Relative_Error,FVM,0.00979424,,,0.0,0.979424%,< 2.0%,PASS
@@ -37,33 +37,33 @@ GCI,T_avg,FVM,56.5759,56.5851,56.6084,nan,nan% (p=N/A (non-monotonic)),requires 
 Probe_Sampling_Methods,FEM,barycentric_interpolation,,,,,,documented,INFO
 Probe_Sampling_Methods,FDM,trilinear_interpolation_(nearest_solid_near_staircase),,,,,,documented,INFO
 Probe_Sampling_Methods,FVM,cell_value_plus_Green-Gauss_gradient_correction,,,,,,documented,INFO
-Probe_Points,Probe_1,Extrap_Consensus,56.0731,55.6405,56.0209,55.9115,0.432606 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_2,Extrap_Consensus,55.5435,55.1279,55.4678,55.3797,0.415611 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_3,Extrap_Consensus,57.4376,57.0026,57.5612,57.3338,0.558648 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_4,Extrap_Consensus,56.353,55.9635,56.4504,56.2556,0.486938 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_5,Extrap_Consensus,55.8724,55.4455,55.8065,55.7081,0.42695 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_6,Extrap_Consensus,57.6929,57.3244,57.8885,57.6353,0.56409 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_7,Extrap_Consensus,56.1751,55.784,56.2491,56.0694,0.465075 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_8,Extrap_Consensus,57.0618,56.6623,57.2772,57.0004,0.614951 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_9,Extrap_Consensus,60.3711,59.9458,60.9784,60.4318,1.03261 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_10,Extrap_Consensus,59.6817,59.2997,60.1527,59.7114,0.852985 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_11,Extrap_Consensus,59.245,58.9245,59.8422,59.3372,0.917672 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_12,Extrap_Consensus,59.1876,58.8896,59.8697,59.3156,0.980067 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_13,Extrap_Consensus,56.0155,55.5482,55.9048,55.8228,0.467323 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_14,Extrap_Consensus,55.6225,55.1721,55.5048,55.4331,0.450421 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_15,Extrap_Consensus,58.406,58.0273,58.6672,58.3668,0.63989 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_16,Extrap_Consensus,56.4299,56.0464,56.5079,56.3281,0.461512 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_17,Extrap_Consensus,57.3653,56.9306,57.4829,57.2596,0.552241 C spread,< 5.0 C spread,PASS
+Probe_Points,Probe_1,Extrap_Consensus,56.0731,55.6405,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_2,Extrap_Consensus,55.5435,55.1279,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_3,Extrap_Consensus,57.4376,57.0026,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_4,Extrap_Consensus,nan,55.9635,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_5,Extrap_Consensus,55.8724,55.4455,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_6,Extrap_Consensus,57.6929,57.3244,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_7,Extrap_Consensus,nan,55.784,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_8,Extrap_Consensus,nan,56.6623,57.2772,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_9,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_10,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_11,Extrap_Consensus,nan,58.9245,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_12,Extrap_Consensus,nan,58.8896,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_13,Extrap_Consensus,nan,55.5482,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_14,Extrap_Consensus,nan,55.1721,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_15,Extrap_Consensus,58.406,58.0273,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_16,Extrap_Consensus,nan,56.0464,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_17,Extrap_Consensus,nan,56.9306,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_18,Extrap_Consensus,56.5128,56.1082,56.606,56.409,0.497778 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_19,Extrap_Consensus,55.3633,54.9049,55.1438,55.1373,0.458428 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_20,Extrap_Consensus,55.855,55.4167,55.6955,55.6558,0.438272 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_21,Extrap_Consensus,57.3905,57.011,57.5552,57.3189,0.54414 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_22,Extrap_Consensus,56.3042,55.9104,56.3506,56.1884,0.440247 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_23,Extrap_Consensus,57.025,56.6407,57.0524,56.906,0.411738 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_24,Extrap_Consensus,56.4778,56.0651,56.455,56.3326,0.412741 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_25,Extrap_Consensus,55.1466,54.6719,54.9218,54.9134,0.474673 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_26,Extrap_Consensus,55.6255,55.1685,55.4776,55.4239,0.456981 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_27,Extrap_Consensus,57.0402,56.6308,57.1881,56.953,0.557289 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_28,Extrap_Consensus,56.1904,55.7856,56.2373,56.0711,0.45175 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_29,Extrap_Consensus,56.7563,56.348,56.8181,56.6408,0.470168 C spread,< 5.0 C spread,PASS
-Probe_Points,Probe_30,Extrap_Consensus,56.2438,55.8115,56.2234,56.0929,0.432292 C spread,< 5.0 C spread,PASS
+Probe_Points,Probe_19,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_20,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_21,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_22,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_23,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_24,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_25,Extrap_Consensus,nan,54.6719,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_26,Extrap_Consensus,nan,55.1685,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_27,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_28,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_29,Extrap_Consensus,nan,56.348,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_30,Extrap_Consensus,nan,55.8115,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS

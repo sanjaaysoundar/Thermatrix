@@ -1,0 +1,69 @@
+================================================================================
+ROUND 5 CORRECTION 5: CONSENSUS & PROBE SAMPLING METHODOLOGY AUDIT
+================================================================================
+Timestamp: 2026-11-15T17:25:30+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. Consensus Reference Reformulation:
+-------------------------------------
+A. T_max Consensus:
+   - Evaluated across Coarse, Medium, and Fine levels for FEM, FDM, and FVM.
+   - Steep localized temperature gradients at the underside heat source patch prevent
+     monotonic asymptotic Richardson convergence for all three solvers on these grid resolutions.
+   - Strict V&V Protocol: When no solver achieves monotonic convergence, the cross-solver
+     consensus is reported as UNAVAILABLE (NaN).
+   - Finer FEM run (23,940 nodes, T_max = 60.8134 °C) is preserved strictly as an independent
+     single-method cross-check, and is NEVER substituted as a synthetic consensus reference.
+
+B. T_avg Consensus:
+   - Volume-weighted average temperatures across 3 grids:
+       FEM: 56.5685 °C (Coarse), 56.5692 °C (Medium), 56.5700 °C (Fine) -> Non-monotonic (|e21| > |e32|)
+       FDM: 55.9367 °C (Coarse), 56.1549 °C (Medium), 56.1581 °C (Fine) -> Monotonic (e21=0.0032, e32=0.2182)
+       FVM: 56.5759 °C (Coarse), 56.5851 °C (Medium), 56.6084 °C (Fine) -> Non-monotonic (|e21| > |e32|)
+   - Since only FDM satisfies asymptotic monotonicity, its extrapolated value (56.1584 °C,
+     p = 6.42, GCI_21 = 0.00057%) is strictly labeled as a SINGLE-METHOD EXTRAPOLATION,
+     NOT a cross-solver consensus.
+   - Cross-solver consensus for T_avg is reported as UNAVAILABLE (NaN).
+
+C. 30 Fixed Probe Points Sampling & Pairwise Comparison:
+   - Sampling methods documented:
+       FEM: Barycentric linear tetrahedral shape function interpolation
+       FDM: Trilinear voxel interpolation with nearest-solid projection
+       FVM: Control volume cell value plus Green-Gauss gradient correction (T_P + grad(T) . dr)
+   - Extrapolation: Three-grid Richardson extrapolation evaluated without artificial fallback to
+     fine-grid values. Non-monotonic probe points evaluate strictly to NaN.
+   - Primary Cross-Solver Metric: Pairwise RMSE between solver pairs evaluated across all 30 probes
+     at the Fine grid resolution:
+       FEM vs FDM Pairwise RMSE = 0.415642 °C (< 3.0 °C, PASS)
+       FEM vs FVM Pairwise RMSE = 0.249764 °C (< 3.0 °C, PASS)
+       FDM vs FVM Pairwise RMSE = 0.545928 °C (< 3.0 °C, PASS)
+       Finer FEM vs Fine FEM    = 0.016912 °C (< 1.0 °C, PASS)
+
+2. Full Test Suite Execution Log:
+---------------------------------
+Command:
+cmd /c "set PATH=C:\msys64\mingw64\bin;%PATH% && ctest --test-dir build --output-on-failure"
+
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.04 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.02 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.01 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.01 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.02 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.08 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.49 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   12.86 sec
+
+100% tests passed out of 8
+
+Total Test time (real) =  14.55 sec
+================================================================================

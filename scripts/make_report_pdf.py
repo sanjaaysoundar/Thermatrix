@@ -585,17 +585,17 @@ story += [
     P("<i>Note on FVM MMS order:</i> On unstructured tetrahedral meshes generated from the 6-tet-per-cube decomposition, non-orthogonality "
       "leads to an observed spatial convergence order of ~0.87 (first-order O(h)), which accurately reflects tet skewness rather than artificial clamping.", BODY),
     SP(0.2),
-    P("6.3 · 30-Point Fixed Probe Sampling &amp; RMSE vs Consensus Reference", H2), hr(),
+    P("6.3 · 30-Point Fixed Probe Sampling &amp; Pairwise Solver Comparison", H2), hr(),
     P("30 probe points distributed across base, fin roots, fin mid-heights, and fin tips are sampled using rigorous method-specific formulations: "
       "FEM uses barycentric tetrahedral interpolation; FDM uses trilinear interpolation with nearest-solid substitution near staircase boundaries; "
-      "FVM uses cell value plus Green-Gauss gradient correction. RMSE is computed against the consensus reference:", BODY),
+      "FVM uses cell value plus Green-Gauss gradient correction. Pairwise RMSE between solvers at the Fine grid resolution demonstrates outstanding physical agreement:", BODY),
 ]
 val_probe = [
-    ["Solver & Sampling Method", "Probe RMSE vs Consensus", "Acceptance Threshold", "Status"],
-    ["FEM (barycentric interpolation)",               "0.137 °C", "< 2.0 °C", "PASS"],
-    ["FDM (trilinear interpolation)",                 "0.315 °C", "< 2.5 °C", "PASS"],
-    ["FVM (cell + Green-Gauss gradient correction)", "0.245 °C", "< 2.0 °C", "PASS"],
-    ["Finer FEM Cross-Check (barycentric)",           "0.136 °C", "< 2.0 °C", "PASS"],
+    ["Solver Pair / Benchmark Comparison", "Observed Pairwise RMSE", "Acceptance Threshold", "Status"],
+    ["FEM vs FDM (Fine Level, 30 Probes)", "0.416 °C", "< 3.0 °C", "PASS"],
+    ["FEM vs FVM (Fine Level, 30 Probes)", "0.250 °C", "< 3.0 °C", "PASS"],
+    ["FDM vs FVM (Fine Level, 30 Probes)", "0.546 °C", "< 3.0 °C", "PASS"],
+    ["Finer FEM Cross-Check vs Fine FEM",  "0.017 °C", "< 1.0 °C", "PASS"],
 ]
 story += [
     make_table(val_probe[0], val_probe[1:], col_widths=[7.5*cm, 4.0*cm, 3.5*cm, 2.5*cm],
@@ -621,10 +621,13 @@ story += [
                             ("TEXTCOLOR",(8,4),(8,4), GREEN),
                             ("TEXTCOLOR",(8,5),(8,6), HexColor("#D35400"))]),
     SP(0.1),
-    P("<b>Consensus Reference Values:</b><br/>"
-      "• <b>T_max Consensus:</b> No method satisfied monotonic asymptotic convergence for T_max due to steep localized heat flux patch gradients. "
-      "Consensus falls back cleanly to the labelled Finer FEM cross-check value: <b>60.8134 °C</b> (spread = 0.0 °C, diff = 0.0 °C vs Finer FEM).<br/>"
-      "• <b>T_avg Consensus:</b> FDM T_avg converges monotonically to <b>56.1584 °C</b> (spread = 0.0 °C). Finer FEM cross-check confirms 56.5704 °C (diff = 0.412 °C).", BODY),
+    P("<b>Consensus Reference Evaluation:</b><br/>"
+      "• <b>T_max Consensus: UNAVAILABLE.</b> No solver satisfied monotonic asymptotic convergence for T_max due to steep localized source-patch gradients. "
+      "In accordance with rigorous V&amp;V standards, consensus is reported as unavailable rather than substituting finer-grid runs. "
+      "An independent Finer FEM mesh (23.9k nodes) is provided strictly as a separate cross-check (<b>60.8134 °C</b>).<br/>"
+      "• <b>T_avg Extrapolation:</b> Only FDM converges monotonically (p=6.42, GCI₂₁=0.00057%) to <b>56.1584 °C</b>. "
+      "This is classified strictly as a <b>single-method extrapolation</b>, not a cross-solver consensus, because FEM and FVM volume-weighted averages exhibit sub-tenth-degree non-monotonicity across these three grids. "
+      "The independent Finer FEM cross-check confirms T_avg = 56.5704 °C (diff = 0.412 °C vs FDM).", BODY),
     SP(0.2),
     P("6.5 · FVM Non-Orthogonal Correction Audit &amp; Matrix Diagnostics", H2), hr(),
     P("A comprehensive audit of the FVM formulation across Coarse, Medium, and Fine levels demonstrates matrix symmetry, preconditioner stability, and correction sensitivity:", BODY),

@@ -1000,37 +1000,44 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
     suite.tmax_fem_finer  = has_finer ? fem_finer.T_max : fem_f.T_max;
     suite.tavg_fem_finer  = has_finer ? fem_finer.T_avg : fem_f.T_avg;
 
-    // Evaluate consensus for T_max
+    // Evaluate consensus for T_max: rebuild ONLY from quantities that pass monotonic asymptotic convergence
+    // If no method has a valid extrapolation, report consensus as unavailable (NaN).
+    // Do NOT substitute finer FEM for a missing Tmax consensus!
     std::vector<double> valid_tmax;
     if (!std::isnan(suite.tmax_extrap_fem)) valid_tmax.push_back(suite.tmax_extrap_fem);
     if (!std::isnan(suite.tmax_extrap_fdm)) valid_tmax.push_back(suite.tmax_extrap_fdm);
     if (!std::isnan(suite.tmax_extrap_fvm)) valid_tmax.push_back(suite.tmax_extrap_fvm);
 
-    if (!valid_tmax.empty()) {
+    if (valid_tmax.size() >= 2) {
         double s = 0.0, mn = 1e9, mx = -1e9;
         for (double v : valid_tmax) { s += v; mn = std::min(mn, v); mx = std::max(mx, v); }
         suite.tmax_consensus = s / valid_tmax.size();
         suite.tmax_spread    = mx - mn;
+        suite.has_tmax_consensus = true;
     } else {
-        // No valid asymptotic extrapolation for Tmax; consensus reference set to Finer FEM cross-check
-        suite.tmax_consensus = suite.tmax_fem_finer;
-        suite.tmax_spread    = 0.0;
+        // Consensus unavailable: no method or only 1 method has valid extrapolation
+        suite.tmax_consensus = std::numeric_limits<double>::quiet_NaN();
+        suite.tmax_spread    = std::numeric_limits<double>::quiet_NaN();
+        suite.has_tmax_consensus = false;
     }
 
-    // Evaluate consensus for T_avg
+    // Evaluate consensus for T_avg: require cross-solver agreement (at least 2 solvers)
     std::vector<double> valid_tavg;
     if (!std::isnan(suite.tavg_extrap_fem)) valid_tavg.push_back(suite.tavg_extrap_fem);
     if (!std::isnan(suite.tavg_extrap_fdm)) valid_tavg.push_back(suite.tavg_extrap_fdm);
     if (!std::isnan(suite.tavg_extrap_fvm)) valid_tavg.push_back(suite.tavg_extrap_fvm);
 
-    if (!valid_tavg.empty()) {
+    if (valid_tavg.size() >= 2) {
         double s = 0.0, mn = 1e9, mx = -1e9;
         for (double v : valid_tavg) { s += v; mn = std::min(mn, v); mx = std::max(mx, v); }
         suite.tavg_consensus = s / valid_tavg.size();
         suite.tavg_spread    = mx - mn;
+        suite.has_tavg_consensus = true;
     } else {
-        suite.tavg_consensus = suite.tavg_fem_finer;
-        suite.tavg_spread    = 0.0;
+        // Cross-solver consensus unavailable (only single-method FDM extrapolation valid)
+        suite.tavg_consensus = std::numeric_limits<double>::quiet_NaN();
+        suite.tavg_spread    = std::numeric_limits<double>::quiet_NaN();
+        suite.has_tavg_consensus = false;
     }
 
     // 5. 30 Fixed Probe Points Sampling across Coarse, Med, Fine
@@ -1038,6 +1045,7 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
     double sum_sq_fem_fdm = 0.0, sum_sq_fem_fvm = 0.0, sum_sq_fdm_fvm = 0.0;
     double sum_sq_fem_cons = 0.0, sum_sq_fdm_cons = 0.0, sum_sq_fvm_cons = 0.0;
     double sum_sq_finer_cons = 0.0;
+    int n_cons = 0;
 
     for (size_t i = 0; i < probe_coords.size(); ++i) {
         ProbePoint3D p;
@@ -1058,11 +1066,12 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
         p.T_fvm_f = sample_fvm(mesh_f, fvm_f.T, p.coord);
 
         // Richardson extrapolation per method using three-grid formulation
+        // Strict monotonic check without fine-grid fallback:
         auto extrap_probe = [](double fc, double fm, double ff, double r21, double r32) -> double {
             double e21 = ff - fm;
             double e32 = fm - fc;
             if (e21 * e32 <= 0.0 || std::abs(e21) >= std::abs(e32) || std::abs(e21) < 1e-12) {
-                return ff; // fallback to fine value when not monotonic
+                return std::numeric_limits<double>::quiet_NaN();
             }
             double p = std::log(e32 / e21) / std::log(r21);
             if (std::abs(r21 - r32) > 1e-4) {
@@ -1078,7 +1087,7 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
                 }
             }
             double denom = std::pow(r21, p) - 1.0;
-            if (denom <= 1e-4) return ff;
+            if (denom <= 1e-4) return std::numeric_limits<double>::quiet_NaN();
             return ff + (ff - fm) / denom;
         };
 
@@ -1086,10 +1095,27 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
         p.T_extrap_fdm = extrap_probe(p.T_fdm_c, p.T_fdm_m, p.T_fdm_f, r21_fdm, r32_fdm);
         p.T_extrap_fvm = extrap_probe(p.T_fvm_c, p.T_fvm_m, p.T_fvm_f, r21_fvm, r32_fvm);
 
-        // Consensus reference = mean of extrapolated values
-        p.T_consensus = (p.T_extrap_fem + p.T_extrap_fdm + p.T_extrap_fvm) / 3.0;
-        p.spread = std::max({p.T_extrap_fem, p.T_extrap_fdm, p.T_extrap_fvm}) -
-                   std::min({p.T_extrap_fem, p.T_extrap_fdm, p.T_extrap_fvm});
+        // Consensus reference = mean of extrapolated values ONLY where all 3 contributing extrapolations are valid
+        std::vector<double> valid_p_extrap;
+        if (!std::isnan(p.T_extrap_fem)) valid_p_extrap.push_back(p.T_extrap_fem);
+        if (!std::isnan(p.T_extrap_fdm)) valid_p_extrap.push_back(p.T_extrap_fdm);
+        if (!std::isnan(p.T_extrap_fvm)) valid_p_extrap.push_back(p.T_extrap_fvm);
+
+        if (valid_p_extrap.size() == 3) {
+            double sum_e = 0.0, mn = 1e9, mx = -1e9;
+            for (double v : valid_p_extrap) {
+                sum_e += v;
+                mn = std::min(mn, v);
+                mx = std::max(mx, v);
+            }
+            p.T_consensus = sum_e / 3.0;
+            p.spread = mx - mn;
+            p.has_consensus = true;
+        } else {
+            p.T_consensus = std::numeric_limits<double>::quiet_NaN();
+            p.spread = std::numeric_limits<double>::quiet_NaN();
+            p.has_consensus = false;
+        }
 
         // Labelled cross-check: Finer FEM run
         if (has_finer) {
@@ -1104,18 +1130,19 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
         p.T_fvm = p.T_fvm_f;
         p.T_ref = p.T_consensus;
 
-        // Pairwise differences at Fine level
+        // Pairwise differences at Fine level (always well-defined across all 30 probes)
         sum_sq_fem_fdm += (p.T_fem_f - p.T_fdm_f) * (p.T_fem_f - p.T_fdm_f);
         sum_sq_fem_fvm += (p.T_fem_f - p.T_fvm_f) * (p.T_fem_f - p.T_fvm_f);
         sum_sq_fdm_fvm += (p.T_fdm_f - p.T_fvm_f) * (p.T_fdm_f - p.T_fvm_f);
 
-        // Solver vs Consensus differences
-        sum_sq_fem_cons += (p.T_fem_f - p.T_consensus) * (p.T_fem_f - p.T_consensus);
-        sum_sq_fdm_cons += (p.T_fdm_f - p.T_consensus) * (p.T_fdm_f - p.T_consensus);
-        sum_sq_fvm_cons += (p.T_fvm_f - p.T_consensus) * (p.T_fvm_f - p.T_consensus);
-
-        // Cross-check vs Consensus
-        sum_sq_finer_cons += (p.T_fem_finer - p.T_consensus) * (p.T_fem_finer - p.T_consensus);
+        // Solver vs Consensus differences (only accumulated when consensus exists)
+        if (p.has_consensus) {
+            sum_sq_fem_cons += (p.T_fem_f - p.T_consensus) * (p.T_fem_f - p.T_consensus);
+            sum_sq_fdm_cons += (p.T_fdm_f - p.T_consensus) * (p.T_fdm_f - p.T_consensus);
+            sum_sq_fvm_cons += (p.T_fvm_f - p.T_consensus) * (p.T_fvm_f - p.T_consensus);
+            sum_sq_finer_cons += (p.T_fem_finer - p.T_consensus) * (p.T_fem_finer - p.T_consensus);
+            n_cons++;
+        }
 
         suite.probes.push_back(p);
     }
@@ -1125,10 +1152,17 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
     suite.rmse_fem_fvm = std::sqrt(sum_sq_fem_fvm / n_p);
     suite.rmse_fdm_fvm = std::sqrt(sum_sq_fdm_fvm / n_p);
 
-    suite.rmse_fem_vs_consensus = std::sqrt(sum_sq_fem_cons / n_p);
-    suite.rmse_fdm_vs_consensus = std::sqrt(sum_sq_fdm_cons / n_p);
-    suite.rmse_fvm_vs_consensus = std::sqrt(sum_sq_fvm_cons / n_p);
-    suite.rmse_finer_fem_vs_consensus = std::sqrt(sum_sq_finer_cons / n_p);
+    if (n_cons > 0) {
+        suite.rmse_fem_vs_consensus = std::sqrt(sum_sq_fem_cons / n_cons);
+        suite.rmse_fdm_vs_consensus = std::sqrt(sum_sq_fdm_cons / n_cons);
+        suite.rmse_fvm_vs_consensus = std::sqrt(sum_sq_fvm_cons / n_cons);
+        suite.rmse_finer_fem_vs_consensus = std::sqrt(sum_sq_finer_cons / n_cons);
+    } else {
+        suite.rmse_fem_vs_consensus = std::numeric_limits<double>::quiet_NaN();
+        suite.rmse_fdm_vs_consensus = std::numeric_limits<double>::quiet_NaN();
+        suite.rmse_fvm_vs_consensus = std::numeric_limits<double>::quiet_NaN();
+        suite.rmse_finer_fem_vs_consensus = std::numeric_limits<double>::quiet_NaN();
+    }
 
     // Backward compatibility aliases
     suite.rmse_fem = suite.rmse_fem_vs_consensus;
@@ -1154,25 +1188,37 @@ bool VerificationSuiteResult::export_csv(const std::string& filepath) const {
     };
 
     // 1. Consensus Reference for T_max and T_avg
-    std::string tmax_spread_status = (tmax_spread < 3.0) ? "PASS" : "FAIL";
-    out << "Consensus_Tmax,Extrapolated_and_Consensus,FEM_FDM_FVM,"
-        << tmax_extrap_fem << "," << tmax_extrap_fdm << "," << tmax_extrap_fvm << ","
-        << tmax_consensus << "," << tmax_spread << " C spread,< 3.0 C," << tmax_spread_status << "\n";
-    double tmax_diff = std::abs(tmax_fem_finer - tmax_consensus);
-    std::string tmax_cross_status = (tmax_diff < 3.0) ? "PASS" : "FAIL";
-    out << "Consensus_Tmax,CrossCheck_Finer_FEM,FEM_Finer,"
-        << tmax_fem_finer << ",,,"
-        << tmax_consensus << "," << tmax_diff << " C diff,< 3.0 C," << tmax_cross_status << "\n";
+    if (std::isnan(tmax_consensus)) {
+        out << "Consensus_Tmax,Extrapolated_and_Consensus,FEM_FDM_FVM,"
+            << tmax_extrap_fem << "," << tmax_extrap_fdm << "," << tmax_extrap_fvm << ","
+            << "NaN,UNAVAILABLE (no method monotonic),consensus unavailable,UNAVAILABLE\n";
+    } else {
+        std::string tmax_spread_status = (tmax_spread < 3.0) ? "PASS" : "FAIL";
+        out << "Consensus_Tmax,Extrapolated_and_Consensus,FEM_FDM_FVM,"
+            << tmax_extrap_fem << "," << tmax_extrap_fdm << "," << tmax_extrap_fvm << ","
+            << tmax_consensus << "," << tmax_spread << " C spread,< 3.0 C," << tmax_spread_status << "\n";
+    }
 
-    std::string tavg_spread_status = (tavg_spread < 1.5) ? "PASS" : "FAIL";
-    out << "Consensus_Tavg,Extrapolated_and_Consensus,FEM_FDM_FVM,"
-        << tavg_extrap_fem << "," << tavg_extrap_fdm << "," << tavg_extrap_fvm << ","
-        << tavg_consensus << "," << tavg_spread << " C spread,< 1.5 C," << tavg_spread_status << "\n";
-    double tavg_diff = std::abs(tavg_fem_finer - tavg_consensus);
-    std::string tavg_cross_status = (tavg_diff < 1.5) ? "PASS" : "FAIL";
+    // Separate cross-check row: do not substitute for missing Tmax consensus
+    out << "Consensus_Tmax,CrossCheck_Finer_FEM,FEM_Finer,"
+        << tmax_fem_finer << ",,,NaN,"
+        << tmax_fem_finer << " C (separate cross-check),cross-check only,INFO\n";
+
+    // T_avg: FDM is single-method extrapolation, not cross-solver consensus
+    if (std::isnan(tavg_consensus)) {
+        out << "Consensus_Tavg,SingleMethod_Extrapolation,FDM,"
+            << tavg_extrap_fem << "," << tavg_extrap_fdm << "," << tavg_extrap_fvm << ","
+            << "NaN," << tavg_extrap_fdm << " C (single-method FDM extrap; consensus UNAVAILABLE),single-method,INFO\n";
+    } else {
+        std::string tavg_spread_status = (tavg_spread < 1.5) ? "PASS" : "FAIL";
+        out << "Consensus_Tavg,Extrapolated_and_Consensus,FEM_FDM_FVM,"
+            << tavg_extrap_fem << "," << tavg_extrap_fdm << "," << tavg_extrap_fvm << ","
+            << tavg_consensus << "," << tavg_spread << " C spread,< 1.5 C," << tavg_spread_status << "\n";
+    }
+
     out << "Consensus_Tavg,CrossCheck_Finer_FEM,FEM_Finer,"
-        << tavg_fem_finer << ",,,"
-        << tavg_consensus << "," << tavg_diff << " C diff,< 1.5 C," << tavg_cross_status << "\n";
+        << tavg_fem_finer << ",,,NaN,"
+        << tavg_fem_finer << " C (separate cross-check),cross-check only,INFO\n";
 
     // 2. Pairwise RMSE at Fine level
     out << "Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FDM,"
@@ -1183,14 +1229,21 @@ bool VerificationSuiteResult::export_csv(const std::string& filepath) const {
         << rmse_fdm_fvm << ",,,0.0," << rmse_fdm_fvm << " C,< 3.0 C," << pass_lt(rmse_fdm_fvm, 3.0) << "\n";
 
     // 3. Solver RMSE versus Consensus Reference
-    out << "Consensus_RMSE,RMSE_vs_Consensus,FEM (barycentric),"
-        << rmse_fem_vs_consensus << ",,,0.0," << rmse_fem_vs_consensus << " C,< 2.0 C," << pass_lt(rmse_fem_vs_consensus, 2.0) << "\n";
-    out << "Consensus_RMSE,RMSE_vs_Consensus,FDM (trilinear),"
-        << rmse_fdm_vs_consensus << ",,,0.0," << rmse_fdm_vs_consensus << " C,< 2.5 C," << pass_lt(rmse_fdm_vs_consensus, 2.5) << "\n";
-    out << "Consensus_RMSE,RMSE_vs_Consensus,FVM (cell+Green-Gauss),"
-        << rmse_fvm_vs_consensus << ",,,0.0," << rmse_fvm_vs_consensus << " C,< 2.0 C," << pass_lt(rmse_fvm_vs_consensus, 2.0) << "\n";
-    out << "Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer (barycentric),"
-        << rmse_finer_fem_vs_consensus << ",,,0.0," << rmse_finer_fem_vs_consensus << " C,< 2.0 C," << pass_lt(rmse_finer_fem_vs_consensus, 2.0) << "\n";
+    if (!std::isnan(rmse_fem_vs_consensus)) {
+        out << "Consensus_RMSE,RMSE_vs_Consensus,FEM (barycentric),"
+            << rmse_fem_vs_consensus << ",,,0.0," << rmse_fem_vs_consensus << " C,< 2.0 C," << pass_lt(rmse_fem_vs_consensus, 2.0) << "\n";
+        out << "Consensus_RMSE,RMSE_vs_Consensus,FDM (trilinear),"
+            << rmse_fdm_vs_consensus << ",,,0.0," << rmse_fdm_vs_consensus << " C,< 2.5 C," << pass_lt(rmse_fdm_vs_consensus, 2.5) << "\n";
+        out << "Consensus_RMSE,RMSE_vs_Consensus,FVM (cell+Green-Gauss),"
+            << rmse_fvm_vs_consensus << ",,,0.0," << rmse_fvm_vs_consensus << " C,< 2.0 C," << pass_lt(rmse_fvm_vs_consensus, 2.0) << "\n";
+        out << "Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer (barycentric),"
+            << rmse_finer_fem_vs_consensus << ",,,0.0," << rmse_finer_fem_vs_consensus << " C,< 2.0 C," << pass_lt(rmse_finer_fem_vs_consensus, 2.0) << "\n";
+    } else {
+        out << "Consensus_RMSE,RMSE_vs_Consensus,FEM (barycentric),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
+        out << "Consensus_RMSE,RMSE_vs_Consensus,FDM (trilinear),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
+        out << "Consensus_RMSE,RMSE_vs_Consensus,FVM (cell+Green-Gauss),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
+        out << "Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer (barycentric),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
+    }
 
     // 4. 1D Slab Test (physically normalised)
     out << "1D_Slab,L2_Relative_Error,FEM," << slab_L2_fem << ",,,0.0," << (slab_L2_fem * 100.0) << "%,< 1.0%," << pass_lt(slab_L2_fem, 0.01) << "\n";
@@ -1240,10 +1293,16 @@ bool VerificationSuiteResult::export_csv(const std::string& filepath) const {
     out << "Probe_Sampling_Methods,FDM,trilinear_interpolation_(nearest_solid_near_staircase),,,,,,documented,INFO\n";
     out << "Probe_Sampling_Methods,FVM,cell_value_plus_Green-Gauss_gradient_correction,,,,,,documented,INFO\n";
     for (const auto& p : probes) {
-        std::string probe_status = (p.spread < 5.0) ? "PASS" : "FAIL";
-        out << "Probe_Points," << p.name << ",Extrap_Consensus,"
-            << p.T_extrap_fem << "," << p.T_extrap_fdm << "," << p.T_extrap_fvm << ","
-            << p.T_consensus << "," << p.spread << " C spread,< 5.0 C spread," << probe_status << "\n";
+        if (p.has_consensus) {
+            std::string probe_status = (p.spread < 5.0) ? "PASS" : "FAIL";
+            out << "Probe_Points," << p.name << ",Extrap_Consensus,"
+                << p.T_extrap_fem << "," << p.T_extrap_fdm << "," << p.T_extrap_fvm << ","
+                << p.T_consensus << "," << p.spread << " C spread,< 5.0 C spread," << probe_status << "\n";
+        } else {
+            out << "Probe_Points," << p.name << ",Extrap_Consensus,"
+                << p.T_extrap_fem << "," << p.T_extrap_fdm << "," << p.T_extrap_fvm << ","
+                << "NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS\n";
+        }
     }
 
     return true;

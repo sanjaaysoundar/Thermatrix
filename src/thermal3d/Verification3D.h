@@ -30,10 +30,11 @@ struct ProbePoint3D {
     double T_extrap_fdm{0.0};
     double T_extrap_fvm{0.0};
 
-    // Consensus reference = mean of the 3 extrapolated values
+    // Consensus reference = mean of the 3 extrapolated values (NaN if no consensus)
     double T_consensus{0.0};
     // Spread across methods = max(extrap) - min(extrap)
     double spread{0.0};
+    bool   has_consensus{false};
 
     // Labelled cross-check: Finer FEM run (20k+ nodes)
     double T_fem_finer{0.0};
@@ -106,9 +107,11 @@ struct VerificationSuiteResult {
     // Consensus for T_max and T_avg
     double tmax_extrap_fem{0.0}, tmax_extrap_fdm{0.0}, tmax_extrap_fvm{0.0};
     double tmax_consensus{0.0}, tmax_spread{0.0}, tmax_fem_finer{0.0};
+    bool   has_tmax_consensus{false};
 
     double tavg_extrap_fem{0.0}, tavg_extrap_fdm{0.0}, tavg_extrap_fvm{0.0};
     double tavg_consensus{0.0}, tavg_spread{0.0}, tavg_fem_finer{0.0};
+    bool   has_tavg_consensus{false};
 
     // 4. Richardson Extrapolation & GCI
     std::vector<GciResult> gci_results;
