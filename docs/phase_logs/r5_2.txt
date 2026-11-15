@@ -1,0 +1,66 @@
+================================================================================
+ROUND 5 CORRECTION 2: SURFACE AREA RECALCULATION & THERMAL DISSIPATION AUDIT
+================================================================================
+Timestamp: 2026-11-15T16:59:15+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. Surface Area Discretisation & Classification:
+------------------------------------------------
+From actual mesh boundary face tags and geometries across heatsink_{coarse,medium,fine,finer}.msh:
+- Total Surface Area (STL boundary envelope): 35,451.46 mm^2 (0.0354515 m^2)
+- Heat Source Patch (10 x 10 mm on underside): 100.00 mm^2 (0.0001000 m^2, Neumann flux q = 100,000 W/m^2)
+- Adiabatic Underside (60 x 60 mm base minus patch): 3,500.00 mm^2 (0.0035000 m^2, -k dT/dn = 0)
+- True Exposed Convective (Robin) Area:
+    A_conv = 35,451.46 - 100.00 - 3,500.00 = 31,851.46 mm^2 (0.0318515 m^2)
+
+Cube Geometry Comparison (60 x 60 x 60 mm):
+- Total Cube Surface Area: 6 x (60 x 60) = 21,600.00 mm^2 (0.0216000 m^2)
+- Cube Source Patch: 100.00 mm^2 (0.0001000 m^2)
+- Cube Adiabatic Underside: 3,500.00 mm^2 (0.0035000 m^2)
+- Cube Exposed Convective Area (5 exposed faces):
+    A_conv,cube = 5 x 3,600.00 = 18,000.00 mm^2 (0.0180000 m^2)
+
+Convective Area Ratio:
+  A_conv,heatsink / A_conv,cube = 31,851.46 / 18,000.00 = 1.7695x (+76.95% convective area enhancement)
+
+2. Recalculation of Dependent Q / (h A_conv) Temperature Rise:
+--------------------------------------------------------------
+At Q = 10.0 W and T_inf = 25.0 °C:
+- Cube Case A (h = 10 W/m^2 K):
+    Delta T_film = Q / (h * A_conv) = 10.0 / (10.0 * 0.0180000) = 55.56 K
+    Predicted T_film = 25.0 + 55.56 = 80.56 °C
+    Actual Measured T_avg (from results/complexity_study.csv): 80.65 °C (FEM/FDM/FVM)
+- Heat Sink Case A (h = 10 W/m^2 K):
+    Delta T_film = Q / (h * A_conv) = 10.0 / (10.0 * 0.0318515) = 31.40 K
+    Predicted T_film = 25.0 + 31.40 = 56.40 °C
+    Actual Measured T_avg (FEM Fine Case A): 56.57 °C
+- Heat Sink Case B (h = 25 W/m^2 K):
+    Delta T_film = Q / (h * A_conv) = 10.0 / (25.0 * 0.0318515) = 12.56 K
+    Predicted T_film = 25.0 + 12.56 = 37.56 °C
+    Actual Measured T_avg (FEM Fine Case B): 37.63 °C
+
+The 1.77x expansion of convective area directly explains the drop in average body temperature from 80.65 °C to 56.57 °C (-24.08 °C).
+
+3. Complete Raw Test Suite Output:
+----------------------------------
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.02 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.03 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.01 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.01 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.01 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.02 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.46 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   31.05 sec
+
+100% tests passed out of 8
+Total Test time (real) =  32.62 sec
