@@ -165,6 +165,7 @@ bool App::init(int w, int h, const char* title) {
 void App::shutdown() {
     if (fem_thread_.joinable()) fem_thread_.join();
     if (bench_thread_.joinable()) bench_thread_.join();
+    if (t3d_thread_.joinable()) t3d_thread_.join();
 
     if (window_) {
         ImGui_ImplOpenGL3_Shutdown();
@@ -360,6 +361,22 @@ void App::renderGeometryView() {
                 stl_result_ = parseStlFile(p);
                 statusBar(stlSummary(stl_result_), !stl_result_.success);
             });
+    }
+    if (ImGui::Button("Load Heat Sink STL", {-1, 0})) {
+        std::string hs = "data/heatsink.stl";
+        if (!fs::exists(hs)) hs = "../data/heatsink.stl";
+        if (fs::exists(hs)) {
+            stl_path_ = hs;
+            stl_result_ = parseStlFile(hs);
+            statusBar("Loaded Aluminium Heat Sink STL.", !stl_result_.success);
+        } else {
+            t3d::HeatSinkGeometry geom;
+            fs::create_directories("data");
+            geom.export_stl("data/heatsink.stl");
+            stl_path_ = "data/heatsink.stl";
+            stl_result_ = parseStlFile(stl_path_);
+            statusBar("Generated and loaded Aluminium Heat Sink STL.");
+        }
     }
     ImGui::TextDisabled("%s", stl_path_.empty() ? "(no file)" :
                         fs::path(stl_path_).filename().string().c_str());
@@ -593,8 +610,214 @@ void App::renderGeometryView() {
 // ─── thermal analysis view ────────────────────────────────────────────────────
 
 void App::renderThermalView() {
+    ImGui::RadioButton("3D Heat Sink Multi-Solver (FEM / FDM / FVM)", &th_mode_, 1);
+    ImGui::SameLine();
+    ImGui::RadioButton("1D Rod Benchmark (Round 1)", &th_mode_, 0);
+    ImGui::Separator();
+
     float panelH = ImGui::GetContentRegionAvail().y - 28.0f;
 
+    if (th_mode_ == 1) {
+        // ── 3D Heat Sink Multi-Solver View ──────────────────────────────────
+        ImGui::BeginChild("##t3d_ctrl", {280.0f, panelH}, true);
+        ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "3D Geometry & Physics");
+        ImGui::Separator();
+        ImGui::TextDisabled("Object: Aluminium Heat Sink");
+        ImGui::TextDisabled("Base: 80x60x10 mm  Fins: 5x (80x2x30 mm)");
+        ImGui::TextDisabled("Material: Al 6061 (k = 167 W/mK)");
+        ImGui::TextDisabled("Source: 10W on 10x10mm offset patch");
+        ImGui::Spacing();
+
+        ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "Convection Environment");
+        ImGui::RadioButton("Case A: h = 10 W/m²K (Natural)", &t3d_case_choice_, 0);
+        ImGui::RadioButton("Case B: h = 25 W/m²K (Forced)",  &t3d_case_choice_, 1);
+        ImGui::Separator();
+
+        ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "Numerical Solver Selection");
+        ImGui::RadioButton("FEM (Linear Tets)",         &t3d_solver_choice_, 0);
+        ImGui::RadioButton("FDM (7-pt Grid)",           &t3d_solver_choice_, 1);
+        ImGui::RadioButton("FVM (Cell Control Vol)",    &t3d_solver_choice_, 2);
+        ImGui::RadioButton("Compare All (FEM+FDM+FVM)",  &t3d_solver_choice_, 3);
+        ImGui::Separator();
+
+        ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "Mesh Resolution");
+        ImGui::RadioButton("Coarse (~2.1k - 9.6k DOF)",  &t3d_res_choice_, 0);
+        ImGui::RadioButton("Medium (~13k - 72k DOF)",    &t3d_res_choice_, 1);
+        ImGui::RadioButton("Fine (~40k - 248k DOF)",     &t3d_res_choice_, 2);
+        ImGui::Separator();
+
+        if (t3d_running_) {
+            ImGui::TextColored({1.0f, 0.8f, 0.2f, 1.0f}, "Solving 3D Thermal System...");
+        } else {
+            if (ImGui::Button("Run 3D Simulation", {-1, 0})) {
+                startT3DWork();
+            }
+        }
+        ImGui::Spacing();
+
+        if (ImGui::Button("Export Results CSV...", {-1, 0})) {
+#ifdef _WIN32
+            OPENFILENAMEA ofn{};
+            char szFile[MAX_PATH] = "simulation_results.csv";
+            ofn.lStructSize = sizeof(ofn);
+            ofn.lpstrFile   = szFile;
+            ofn.nMaxFile    = MAX_PATH;
+            ofn.lpstrFilter = "CSV Files\0*.csv\0";
+            ofn.Flags       = OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
+            if (GetSaveFileNameA(&ofn)) {
+                std::ofstream f(szFile);
+                if (f) {
+                    f << t3d::SolverResult::csv_header() << "\n";
+                    for (const auto& r : t3d_results_) f << r.to_csv_row() << "\n";
+                    statusBar("Exported 3D simulation results.");
+                }
+            }
+#endif
+        }
+
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        float vpW = ImGui::GetContentRegionAvail().x;
+        ImGui::BeginChild("##t3d_view", {vpW, panelH}, false);
+
+        // Simulation Summary Table
+        ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "Numerical Solver Results Comparison");
+        ImGui::Separator();
+
+        if (!t3d_results_.empty()) {
+            ImGui::Columns(10, "##t3d_table", true);
+            ImGui::Text("Solver");   ImGui::NextColumn();
+            ImGui::Text("Case");     ImGui::NextColumn();
+            ImGui::Text("DOF");      ImGui::NextColumn();
+            ImGui::Text("Iters");    ImGui::NextColumn();
+            ImGui::Text("Time(ms)"); ImGui::NextColumn();
+            ImGui::Text("Tmin(°C)"); ImGui::NextColumn();
+            ImGui::Text("Tmax(°C)"); ImGui::NextColumn();
+            ImGui::Text("Tavg(°C)"); ImGui::NextColumn();
+            ImGui::Text("Tsrc(°C)"); ImGui::NextColumn();
+            ImGui::Text("Balance Err"); ImGui::NextColumn();
+            ImGui::Separator();
+
+            for (const auto& r : t3d_results_) {
+                ImGui::Text("%s", r.solver_name.c_str()); ImGui::NextColumn();
+                ImGui::Text("%s", r.case_label.c_str());  ImGui::NextColumn();
+                ImGui::Text("%d", r.n_dof);               ImGui::NextColumn();
+                ImGui::Text("%d", r.iterations);          ImGui::NextColumn();
+                ImGui::Text("%.1f", r.t_total_ms);        ImGui::NextColumn();
+                ImGui::Text("%.2f", r.T_min);             ImGui::NextColumn();
+                ImGui::Text("%.2f", r.T_max);             ImGui::NextColumn();
+                ImGui::Text("%.2f", r.T_avg);             ImGui::NextColumn();
+                ImGui::Text("%.2f", r.T_src);             ImGui::NextColumn();
+                ImGui::Text("%.2e", r.Q_balance_rel);     ImGui::NextColumn();
+            }
+            ImGui::Columns(1);
+            ImGui::Spacing();
+        } else {
+            ImGui::TextDisabled("Click 'Run 3D Simulation' to execute the selected solver(s).");
+            ImGui::Spacing();
+        }
+
+        // 3D Heat Sink Temperature Viewport
+        ImVec2 vp_pos = ImGui::GetCursorScreenPos();
+        float viewH = panelH - 180.0f;
+        ImGui::BeginChild("##t3d_3d", {vpW - 10, viewH}, true, ImGuiWindowFlags_NoScrollbar);
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+
+        dl->AddRectFilled(vp_pos, {vp_pos.x + vpW - 10, vp_pos.y + viewH},
+                          IM_COL32(14, 18, 26, 255), 4.0f);
+
+        // Projector
+        float cx = vp_pos.x + (vpW - 10) * 0.5f + pan_x_ * 100.0f;
+        float cy = vp_pos.y + viewH * 0.5f + pan_y_ * 100.0f;
+        float sx = zoom_ * std::min(vpW - 10, viewH) * 4.0f;
+        float sy = sx;
+
+        float rX = rot_x_ * 3.14159f / 180.0f;
+        float rY = rot_y_ * 3.14159f / 180.0f;
+        float cX = cosf(rX), sX = sinf(rX);
+        float cY = cosf(rY), sY = sinf(rY);
+
+        auto project3d = [&](float px, float py, float pz) -> ImVec2 {
+            float rx = cY*px + sY*pz;
+            float ry = py;
+            float rz = -sY*px + cY*pz;
+            float fx = rx;
+            float fy = cX*ry - sX*rz;
+            return {cx + fx * sx, cy - fy * sy};
+        };
+
+        // Render heat sink wireframe / shaded blocks
+        // Base box: [-0.04, 0.04] x [-0.03, 0.03] x [-0.02, -0.01]
+        double t_lo = 54.0, t_hi = 60.0;
+        if (!t3d_results_.empty()) {
+            t_lo = t3d_results_[0].T_min;
+            t_hi = t3d_results_[0].T_max;
+        }
+
+        auto draw_box = [&](double x0, double x1, double y0, double y1, double z0, double z1, double temp) {
+            ImVec4 colV = tempColor((float)temp, (float)t_lo, (float)t_hi);
+            ImU32 col = ImGui::ColorConvertFloat4ToU32(colV);
+            ImU32 edge = IM_COL32(40, 45, 60, 200);
+
+            ImVec2 p000 = project3d(x0, y0, z0);
+            ImVec2 p100 = project3d(x1, y0, z0);
+            ImVec2 p110 = project3d(x1, y1, z0);
+            ImVec2 p010 = project3d(x0, y1, z0);
+            ImVec2 p001 = project3d(x0, y0, z1);
+            ImVec2 p101 = project3d(x1, y0, z1);
+            ImVec2 p111 = project3d(x1, y1, z1);
+            ImVec2 p011 = project3d(x0, y1, z1);
+
+            // Shaded top face
+            dl->AddQuadFilled(p001, p101, p111, p011, col);
+            dl->AddQuad(p001, p101, p111, p011, edge, 1.0f);
+            // Front face
+            dl->AddQuadFilled(p000, p100, p101, p001, col);
+            dl->AddQuad(p000, p100, p101, p001, edge, 1.0f);
+            // Right face
+            dl->AddQuadFilled(p100, p110, p111, p101, col);
+            dl->AddQuad(p100, p110, p111, p101, edge, 1.0f);
+        };
+
+        // Draw Base
+        draw_box(-0.040, 0.040, -0.030, 0.030, -0.015, -0.005, (t_lo + t_hi)*0.5);
+
+        // Draw 5 Fins
+        double fin_y_offsets[5] = { -0.024, -0.012, 0.0, 0.012, 0.024 };
+        for (int f = 0; f < 5; ++f) {
+            double fy = fin_y_offsets[f];
+            draw_box(-0.040, 0.040, fy - 0.001, fy + 0.001, -0.005, 0.025, t_lo + 0.2*(t_hi - t_lo));
+        }
+
+        // Colorbar legend
+        float lbX = vp_pos.x + 15.0f, lbY1 = vp_pos.y + 20.0f, lbY2 = vp_pos.y + viewH - 25.0f;
+        int steps = 20;
+        for (int s = 0; s < steps; ++s) {
+            float frac = (float)s / (steps - 1);
+            float T = t_lo + frac * (t_hi - t_lo);
+            ImVec4 c = tempColor(T, (float)t_lo, (float)t_hi);
+            float y0 = lbY2 - frac * (lbY2 - lbY1);
+            float y1 = y0 - (lbY2 - lbY1) / steps;
+            dl->AddRectFilled({lbX, y1}, {lbX + 16, y0}, ImGui::ColorConvertFloat4ToU32(c));
+        }
+        char bMax[32], bMin[32];
+        snprintf(bMax, sizeof(bMax), "%.1f°C", t_hi);
+        snprintf(bMin, sizeof(bMin), "%.1f°C", t_lo);
+        dl->AddText({lbX + 22, lbY1}, IM_COL32(255, 255, 255, 240), bMax);
+        dl->AddText({lbX + 22, lbY2 - 14}, IM_COL32(255, 255, 255, 240), bMin);
+
+        dl->AddText({vp_pos.x + 10, vp_pos.y + viewH - 18},
+                    IM_COL32(200, 220, 240, 255),
+                    "Drag to rotate  |  Mouse wheel to zoom  |  Aluminium 6061 Heat Sink");
+
+        ImGui::EndChild();
+        ImGui::EndChild();
+        return;
+    }
+
+    // ── 1D FEM View (Round 1) ───────────────────────────────────────────────
     ImGui::BeginChild("##th_ctrl", {260.0f, panelH}, true);
     ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "FEM Parameters");
     ImGui::Separator();
@@ -1110,6 +1333,37 @@ void App::startBenchWork() {
         // Auto-export
         fs::create_directories("results");
         benchmarkExportCsv(bench_result_, "results/benchmark_results.csv");
+    });
+}
+
+void App::startT3DWork() {
+    if (t3d_running_) return;
+    t3d_running_ = true;
+    if (t3d_thread_.joinable()) t3d_thread_.join();
+
+    t3d_thread_ = std::thread([this]() {
+        t3d::ConvCase cc = (t3d_case_choice_ == 0) ? t3d::ConvCase::A : t3d::ConvCase::B;
+        t3d::MeshResolution mr = t3d::MeshResolution::Coarse;
+        if (t3d_res_choice_ == 1) mr = t3d::MeshResolution::Medium;
+        else if (t3d_res_choice_ == 2) mr = t3d::MeshResolution::Fine;
+
+        std::vector<t3d::SolverResult> res_list;
+        if (t3d_solver_choice_ == 0 || t3d_solver_choice_ == 3) {
+            t3d::FemSolver3D fem(t3d_prob_);
+            res_list.push_back(fem.solve(cc, mr));
+        }
+        if (t3d_solver_choice_ == 1 || t3d_solver_choice_ == 3) {
+            t3d::FdmSolver3D fdm(t3d_prob_);
+            res_list.push_back(fdm.solve(cc, mr));
+        }
+        if (t3d_solver_choice_ == 2 || t3d_solver_choice_ == 3) {
+            t3d::FvmSolver3D fvm(t3d_prob_);
+            res_list.push_back(fvm.solve(cc, mr));
+        }
+
+        t3d_results_ = std::move(res_list);
+        t3d_running_ = false;
+        statusBar("3D Heat Sink simulation finished.");
     });
 }
 

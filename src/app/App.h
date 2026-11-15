@@ -8,6 +8,12 @@
 #include "../core/BackpropSolver.h"
 #include "../core/BenchmarkEngine.h"
 #include "../core/HardwareMock.h"
+#include "../thermal3d/ThermalProblem.h"
+#include "../thermal3d/SolverResult.h"
+#include "../thermal3d/FemSolver3D.h"
+#include "../thermal3d/FdmSolver3D.h"
+#include "../thermal3d/FvmSolver3D.h"
+#include "../thermal3d/Benchmark3D.h"
 
 #include <string>
 #include <memory>
@@ -97,6 +103,18 @@ private:
     BackpropResult       bp_result_;
     bool                 bp_done_{false};
     BackpropParams       bp_params_;
+
+    // -- 3D Thermal Suite (Assignment 2)
+    int                  th_mode_{1}; // 0 = 1D Thermal, 1 = 3D Heat Sink (FEM/FDM/FVM)
+    int                  t3d_solver_choice_{3}; // 0=FEM, 1=FDM, 2=FVM, 3=Compare All
+    int                  t3d_res_choice_{0}; // 0=Coarse, 1=Medium, 2=Fine
+    int                  t3d_case_choice_{0}; // 0=Case A (h=10), 1=Case B (h=25)
+    t3d::ThermalProblem  t3d_prob_;
+    std::vector<t3d::SolverResult> t3d_results_;
+    std::string          t3d_status_;
+    std::atomic<bool>    t3d_running_{false};
+    std::thread          t3d_thread_;
+    void                 startT3DWork();
 
     // -- Status bar
     std::string          status_msg_;

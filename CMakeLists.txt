@@ -80,6 +80,12 @@ set(T3D_SOURCES
     src/thermal3d/SparseCsr.cpp
     src/thermal3d/LinearSolvers.cpp
     src/thermal3d/SolverResult.cpp
+    src/thermal3d/HeatSinkGeometry.cpp
+    src/thermal3d/Mesh3D.cpp
+    src/thermal3d/FemSolver3D.cpp
+    src/thermal3d/FdmSolver3D.cpp
+    src/thermal3d/FvmSolver3D.cpp
+    src/thermal3d/Benchmark3D.cpp
 )
 
 add_library(thermatrix_t3d STATIC ${T3D_SOURCES})
@@ -114,6 +120,7 @@ target_include_directories(THERMATRIX PRIVATE
 
 target_link_libraries(THERMATRIX PRIVATE
     thermatrix_core
+    thermatrix_t3d
     glfw
     opengl32
 )
@@ -143,6 +150,15 @@ add_executable(test_t3d_linalg tests/test_t3d_linalg.cpp)
 target_include_directories(test_t3d_linalg PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(test_t3d_linalg PRIVATE thermatrix_t3d)
 add_test(NAME test_t3d_linalg COMMAND test_t3d_linalg)
+
+add_executable(test_t3d_solvers tests/test_t3d_solvers.cpp)
+target_include_directories(test_t3d_solvers PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_t3d_solvers PRIVATE thermatrix_t3d)
+add_test(NAME test_t3d_solvers COMMAND test_t3d_solvers)
+
+add_executable(run_t3d_benchmark tests/run_t3d_benchmark.cpp)
+target_include_directories(run_t3d_benchmark PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(run_t3d_benchmark PRIVATE thermatrix_t3d)
 
 # ── Copy data files to binary dir ─────────────────────────────────────────────
 add_custom_command(TARGET THERMATRIX POST_BUILD
