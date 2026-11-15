@@ -1,0 +1,96 @@
+================================================================================
+ROUND 5 CORRECTION 10: FINAL EVIDENCE AND DELIVERY AUDIT
+================================================================================
+Timestamp: 2026-11-15T17:55:00+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. Deliverables Summary:
+------------------------
+  - Final PDF Report:
+      Path: THERMATRIX_ASSIGNMENT_2/Report/THERMATRIX_Round2_Report.pdf
+      Pages: 24 pages (A4)
+      File Size: 7.37 MB
+      Visuals: 15 high-resolution 300 DPI figures, 11 detailed comparative tables
+      Formatting: Zero source code, robust ASCII typography notation, no missing glyphs
+  - Benchmark & Validation CSVs:
+      * results/benchmark_results.csv (all 33 isolated-process benchmark runs)
+      * results/complexity_study.csv (identical verified duplicate)
+      * results/validation_results.csv (1D slab, MMS orders, GCI, 30 probe RMSEs)
+      * results/figure_manifest.csv (mapping of all 15 figures to generating scripts)
+  - Raw Phase Logs:
+      * docs/phase_logs/r5_1.txt (33-row benchmark & CSV numerical claim audit)
+      * docs/phase_logs/r5_2.txt (exposed convective surface area recalculation)
+      * docs/phase_logs/r5_3.txt (volume-weighted vs unweighted T_avg reconciliation)
+      * docs/phase_logs/r5_4.txt (real MMS orders, strict unclamped GCI)
+      * docs/phase_logs/r5_5.txt (elimination of fine-grid fallback & consensus rebuild)
+      * docs/phase_logs/r5_6.txt (FVM SPD proof, non-orthogonality table, patch metrics)
+      * docs/phase_logs/r5_7.txt (energy balance 7.56e-11 max, min/med/max timings)
+      * docs/phase_logs/r5_8.txt (tracing disputed values 61.0295, 60.3265, 60.5567)
+      * docs/phase_logs/r5_9.txt (PDF typography repair & PyMuPDF visual inspection)
+      * docs/phase_logs/r5_10.txt (final evidence and delivery audit log)
+
+2. Concise List of Changed Verification Values & Data Sources:
+---------------------------------------------------------------
+  - Candidate Name & Email: Updated across all documents to Sanjaay S <sanjaaysoundar@gmail.com>.
+  - Convective Surface Area: Recalculated from boundary faces to 31,851.46 mm² (excluding
+    100 mm² patch and 3,500 mm² adiabatic base); convective enhancement ratio is 1.7695×
+    over solid cube (18,000.00 mm²). Film rise Delta T = Q / (h * A_conv) = 31.40 K.
+  - Temperature Averages: Table 7.1, 7.2, 7.4, 8.1, 9.1, and 11.1 present volume-weighted
+    T_avg (vol) (FEM: 56.5700 °C, FDM: 56.1581 °C, FVM: 56.6084 °C) alongside unweighted
+    arithmetic averages T_avg (raw) (FEM: 56.4492 °C, FDM: 56.1581 °C, FVM: 56.5120 °C).
+  - MMS Convergence Orders: Observed 3D polynomial orders: FEM p = 1.8467 (~1.85, O(h^2)),
+    FDM p = 1.8626 (~1.86, O(h^2)), FVM p = 0.8669 (~0.87, O(h)). The claim of second-order
+    for FVM was corrected to reflect first-order accuracy on skewed unstructured tets.
+  - Consensus & Extrapolations:
+      * T_max Consensus: marked UNAVAILABLE / NaN (non-monotonic convergence).
+        Finer FEM (60.8134 °C) reported strictly as a separate cross-check.
+      * T_avg Extrapolation: FDM converges monotonically to 56.1584 °C (GCI_21 = 0.00057%,
+        p = 6.42), labeled strictly as a single-method extrapolation.
+      * Pairwise Probe RMSE (Fine level, 30 probes): FEM vs FDM = 0.4156 °C,
+        FEM vs FVM = 0.2498 °C, FDM vs FVM = 0.5459 °C. All fallback extrapolations removed.
+  - Energy Balance Conservation: Reconciled global maximum error to 7.5602e-11 (FDM Cube
+    Fine Case A); 9-Fin Fine Case A errors: FEM = 5.21e-13, FDM = 2.52e-12, FVM = 2.87e-14.
+  - Timings: Table 9.1 and Table 11.1 display min / median / max statistics. Fine Heat Sink
+    median wall times: FEM 256.4 ms (1.0×), FDM 18,656.3 ms (72.8×), FVM 2,745.8 ms (10.7×).
+  - Traced Disputed Values: 61.0295, 60.3265, 60.5567 traced to commit 7c6eef3 (clamped
+    Richardson order on non-monotonic data); proven to be non-physical artifacts and eliminated.
+
+3. Unresolved Limitations:
+--------------------------
+  - FVM spatial convergence order on skewed tetrahedral meshes is constrained to ~0.87 (first-order)
+    because cell-centered face normal gradients omit secondary cross-diffusion corrections.
+  - Non-monotonic spatial convergence of T_max across tetrahedral mesh refinement levels under
+    concentrated boundary heat flux (Neumann source patch), rendering multi-grid Richardson
+    extrapolation mathematically invalid for peak temperatures.
+  - Voxel staircase boundary representation in FDM introduces a persistent ~0.41 °C cold bias
+    and requires 41× more degrees of freedom (487k vs 11.8k) to resolve tapered fin profiles.
+
+4. Full Test Suite Execution Log:
+---------------------------------
+Command:
+cmd /c "set PATH=C:\msys64\mingw64\bin;%PATH% && cmake --build build -j4 && ctest --test-dir build --output-on-failure"
+
+ninja: no work to do.
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.03 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.02 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.01 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.01 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.01 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.01 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.42 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   12.71 sec
+
+100% tests passed out of 8
+
+Total Test time (real) =  14.24 sec
+================================================================================
