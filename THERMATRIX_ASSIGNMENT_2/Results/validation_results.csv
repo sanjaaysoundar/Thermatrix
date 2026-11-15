@@ -1,0 +1,10 @@
+test_id,description,solver,parameter,numerical_val,analytical_ref,error_rel,status
+1,"Case A Mean Delta T vs Lumped Model",FEM,dT_avg,31.2405,31.0559,0.00594512,PASSED
+2,"Case A Mean Delta T vs Lumped Model",FDM,dT_avg,31.2636,31.0559,0.00668895,PASSED
+3,"Case A Mean Delta T vs Lumped Model",FVM,dT_avg,31.2636,31.0559,0.00668895,PASSED
+4,"Case B Mean Delta T vs Lumped Model",FEM,dT_avg,12.6052,12.4224,0.0147221,PASSED
+5,"Case B Mean Delta T vs Lumped Model",FDM,dT_avg,12.696,12.4224,0.0220249,PASSED
+6,"Case B Mean Delta T vs Lumped Model",FVM,dT_avg,12.696,12.4224,0.0220249,PASSED
+7,"Global Energy Conservation",FEM,Q_conv,10,10,3.58646e-13,PASSED
+8,"Global Energy Conservation",FDM,Q_conv,10,10,6.79137e-12,PASSED
+9,"Global Energy Conservation",FVM,Q_conv,10,10,6.79137e-12,PASSED
