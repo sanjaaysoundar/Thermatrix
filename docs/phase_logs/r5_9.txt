@@ -1,0 +1,78 @@
+================================================================================
+ROUND 5 CORRECTION 9: PDF TYPOGRAPHY REPAIR & VISUAL AUDIT
+================================================================================
+Timestamp: 2026-11-15T17:53:30+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. PDF Typography & Scientific Notation Repair:
+-----------------------------------------------
+Systematically eliminated unencoded Unicode mathematical glyphs, Greek letters,
+superscripts, subscripts, and integral symbols that previously rendered as replacement
+characters or broken glyphs in standard PDF Type 1 / TrueType fonts. Replaced with
+robust, standard ASCII scientific notation:
+  - Exponents & Powers:
+      * Standard scientific notation: 1.49e-9 %, 1.50e-9 %, 6.01e-10 K, 5.39e-9 %,
+        2.16e-9 K, 5.97e-3, 1.91e-3, 5.31e-4, 1.63e-1, 5.55e-2, 1.53e-2, 7.5602e-11,
+        1.0e-13, 1.0e-10, 3.5e-14, 2.52e-12, 3.19e-13, 3.48e-14, < 6.0e-13, < 3.5e-13.
+      * Big-O complexity & dimensions: O(h^2), O(h), O(N^3), m^3, mm^2.
+      * Spatial second derivatives: dx^2, dy^2, dz^2, dn.
+  - Subscripts & Variables:
+      * Ambient temperature: T_inf (replaces T∞).
+      * Norms: L2, L_inf (replaces L₂, L_∞).
+      * Grid differences & GCI: e21, e32, GCI_21 (replaces e₂₁, e₃₂, GCI₂₁).
+      * Temperature metrics: Delta T, Delta Tmax, T_max, T_avg, T_min, T_src.
+      * Transpose notation: A^T, L^T, ||A - A^T|| / ||A|| (replaces Aᵀ, Lᵀ, ‖·‖).
+  - Mathematical Operators & Governing Physics:
+      * PDE: -div(k grad T) = 0 in Omega (replaces −∇·(k ∇T) = 0 in Ω).
+      * Boundary specification: on boundary dOmega (replaces on ∂Ω).
+      * Adiabatic BC: -k dT/dn = 0 (replaces −k ∂T/∂n = 0).
+      * Robin BC: -k dT/dn = h (T - T_inf) (replaces −k ∂T/∂n = h (T − T∞)).
+      * Integral conservation: Q_conv = integral_{Gamma_conv} h (T - T_inf) dA = Q_in = 10.0 W
+        (replaces ∬_{Γ_conv}).
+      * Weak form stiffness: K_ij^e = k * integral_{V_e} grad(phi_i) . grad(phi_j) dV
+        = k * V_e * (grad phi_i . grad phi_j) (replaces ∫_{Vₑ} ∇φᵢ · ∇φⱼ).
+      * Robin boundary face integral: K_ij^{Robin} = h * integral_{Gamma} phi_i * phi_j dA.
+      * FVM face flux: F_f = -k * (T_N - T_P) / d_PN * A_f + F_no with |F_no| <= 0.3 * |F_ortho|.
+      * Preconditioner: A ~= L * L^T with tolerance ||r|| / ||b|| <= 1.0e-10.
+      * Inequalities: <=, >=, ~= (replaces ≤, ≥, ≈).
+
+2. Automated Visual & Text Integrity Inspection:
+------------------------------------------------
+A full audit of THERMATRIX_Round2_Report.pdf was conducted using PyMuPDF (fitz):
+  - Document Structure: Exactly 24 pages generated.
+  - Replacement Characters: 0 instances of \ufffd or ? encoding errors found across all pages.
+  - Page Geometry: All text blocks strictly respect margins (left 1.8 cm, right 1.8 cm,
+    top 2.0 cm, bottom 1.5 cm) without overlapping the navy header or steel footer bars.
+  - Figures & Tables: All 15 figures and 11 summary tables render with clean alignment and
+    full legibility.
+  - Raster Verification: Rendered all 24 pages to pixmaps at 150 DPI without rasterization errors.
+
+3. Full Test Suite Execution Log:
+---------------------------------
+Command:
+cmd /c "set PATH=C:\msys64\mingw64\bin;%PATH% && cmake --build build -j4 && ctest --test-dir build --output-on-failure"
+
+ninja: no work to do.
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.02 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.02 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.01 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.01 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.01 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.02 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.39 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   12.75 sec
+
+100% tests passed out of 8
+
+Total Test time (real) =  14.25 sec
+================================================================================

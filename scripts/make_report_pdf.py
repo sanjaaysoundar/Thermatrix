@@ -300,7 +300,7 @@ story += [
       "Three mesh levels and two convection cases (h=10 and 25 W/m²K) are benchmarked in "
       "isolated single-process runs (1 warm-up + 5 measured runs). "
       "All results come from actual execution; no number is invented or estimated. "
-      "The maximum energy balance error across all 33 runs is 7.56×10⁻¹¹ (relative). "
+      "The maximum energy balance error across all 33 runs is 7.5602e-11 (relative). "
       "Verification confirms second-order spatial convergence for FEM (p=1.85) and FDM (p=1.86), "
       "while cell-centred FVM achieves first-order spatial convergence (p=0.87) on unstructured skewed tetrahedral meshes.", BODY),
     SP(0.3),
@@ -361,20 +361,20 @@ story += [toc_tbl, PageBreak()]
 # ===========================================================================
 story += [
     P("1 · Problem Statement &amp; Physics", H1), section_rule(),
-    P("The governing partial differential equation for steady-state thermal conduction in the solid domain Ω is:", BODY),
+    P("The governing partial differential equation for steady-state thermal conduction in the solid domain Omega is:", BODY),
     SP(0.1),
-    P("<b>−∇·(k ∇T) = 0</b>  &nbsp;&nbsp; in Ω", BODY_L),
+    P("<b>-div(k grad T) = 0</b>  &nbsp;&nbsp; in Omega", BODY_L),
     SP(0.1),
     P("where k is the thermal conductivity of Aluminium 6061 (constant, isotropic k = 167 W/mK). "
-      "The boundary conditions applied on ∂Ω are:", BODY),
+      "The boundary conditions applied on boundary dOmega are:", BODY),
 ]
 
 bc_data = [
     ["Boundary Face",          "Condition",             "Parameter"],
-    ["Source patch (10×10 mm underside)", "Neumann heat flux: q″ = Q / A_patch", "Q = 10.0 W (uniform)"],
-    ["Underside outside patch", "Adiabatic: −k ∂T/∂n = 0",   "—"],
-    ["All exposed surfaces",   "Robin convection: −k ∂T/∂n = h (T − T∞)", "Case A: h=10, Case B: h=25 W/m²K"],
-    ["Ambient temperature",    "T∞ = 25.0 °C",          "—"],
+    ["Source patch (10×10 mm underside)", "Neumann heat flux: q'' = Q / A_patch", "Q = 10.0 W (uniform)"],
+    ["Underside outside patch", "Adiabatic: -k dT/dn = 0",   "—"],
+    ["All exposed surfaces",   "Robin convection: -k dT/dn = h (T - T_inf)", "Case A: h=10, Case B: h=25 W/m²K"],
+    ["Ambient temperature",    "T_inf = 25.0 °C",          "—"],
     ["Material (Al 6061)",     "k = 167.0 W/mK",        "Constant isotropic"],
 ]
 story += [
@@ -382,16 +382,16 @@ story += [
     make_table(bc_data[0], bc_data[1:], col_widths=[6.5*cm, 6*cm, 4*cm]),
     SP(0.3),
     P("<b>Source patch asymmetry:</b> The 10×10 mm heat source is deliberately offset from the base centre: "
-      "x<sub>c</sub> = L<sub>x</sub>/2 − 10 mm, y<sub>c</sub> = L<sub>y</sub>/2 + 5 mm "
-      "(offsets dx = −10 mm, dy = +5 mm). This breaks quarter-symmetry and forces full 3D simulation across the entire domain.", BODY),
+      "x<sub>c</sub> = L<sub>x</sub>/2 - 10 mm, y<sub>c</sub> = L<sub>y</sub>/2 + 5 mm "
+      "(offsets dx = -10 mm, dy = +5 mm). This breaks quarter-symmetry and forces full 3D simulation across the entire domain.", BODY),
     SP(0.2),
     P("<b>Energy balance conservation:</b> Steady-state energy conservation requires the total heat input Q<sub>in</sub> "
       "to balance the convective heat loss Q<sub>conv</sub> over all exposed boundary faces:", BODY),
     SP(0.1),
-    P("Q<sub>conv</sub> = ∬<sub>Γ_conv</sub> h (T − T∞) dA  =  Q<sub>in</sub> = 10.0 W", BODY_L),
+    P("Q_conv = integral_{Gamma_conv} h (T - T_inf) dA = Q_in = 10.0 W", BODY_L),
     SP(0.1),
-    P("Every solver implements an explicit numerical energy balance check Q<sub>bal</sub> = |Q<sub>in</sub> − Q<sub>conv</sub>| / Q<sub>in</sub>. "
-      "Across all 33 benchmark runs, Q<sub>bal</sub> remains below 7.6×10⁻¹¹, verifying conservative discretisations.", BODY),
+    P("Every solver implements an explicit numerical energy balance check Q_bal = |Q_in - Q_conv| / Q_in. "
+      "Across all 33 benchmark runs, Q<sub>bal</sub> remains below 7.5602e-11, verifying conservative discretisations.", BODY),
     PageBreak(),
 ]
 
@@ -410,15 +410,15 @@ geom_data = [
     ["Fin height", "25.0 mm"],
     ["Fin thickness – root", "2.0 mm"],
     ["Fin thickness – tip", "1.2 mm (symmetric linear taper)"],
-    ["Fin pitch (centre-to-centre)", "60.0 mm / 9 ≈ 6.67 mm"],
-    ["Fin gap at root", "≈ 4.67 mm"],
+    ["Fin pitch (centre-to-centre)", "60.0 mm / 9 ~= 6.67 mm"],
+    ["Fin gap at root", "~= 4.67 mm"],
     ["Total heat sink height", "29.0 mm (4.0 mm base + 25.0 mm fins)"],
     ["Total surface area (STL)", "35,451.46 mm² (0.035451 m²)"],
     ["Exposed convective area", "31,851.46 mm² (0.031851 m², excluding patch & adiabatic base)"],
     ["Convective area ratio vs cube", "1.7695× (31,851.46 mm² vs 18,000.00 mm²)"],
     ["Source patch", "10.0 × 10.0 mm on underside (100.00 mm²)"],
-    ["Adiabatic underside", "3,500.00 mm² (60×60 − 10×10 mm)"],
-    ["Patch centre offset", "dx = −10.0 mm, dy = +5.0 mm from centre"],
+    ["Adiabatic underside", "3,500.00 mm² (60x60 - 10x10 mm)"],
+    ["Patch centre offset", "dx = -10.0 mm, dy = +5.0 mm from centre"],
     ["STL mesh generation", "data/heatsink.stl (watertight, 100% 2-manifold)"],
     ["FEM / FVM tetrahedral mesh", "data/heatsink_{coarse,medium,fine}.msh"],
     ["FDM Cartesian grid", "STL ray-cast voxeliser with solid-cell mask"],
@@ -455,28 +455,28 @@ story += [
 story += [
     P("3 · Discretisation Methods", H1), section_rule(),
     P("3.1 · FEM – P1 Galerkin Tetrahedra", H2), hr(),
-    P("The weak form of −∇·(k∇T)=0 is discretised with linear (P1) tetrahedral elements on conforming Gmsh meshes. "
-      "For each tetrahedral element e with volume Vₑ:", BODY),
-    P("K<sub>ij</sub><sup>e</sup> = k ∫<sub>Vₑ</sub> ∇φᵢ · ∇φⱼ dV = k Vₑ (∇φᵢ · ∇φⱼ)", BODY_L),
-    P("where shape function gradients ∇φᵢ are constant per element. Convective Robin conditions are integrated "
-      "over boundary triangle faces Γ: K<sub>ij</sub><sup>Robin</sup> = h ∬<sub>Γ</sub> φᵢ φⱼ dA. "
+    P("The weak form of -div(k grad T)=0 is discretised with linear (P1) tetrahedral elements on conforming Gmsh meshes. "
+      "For each tetrahedral element e with volume V_e:", BODY),
+    P("K_ij^e = k * integral_{V_e} grad(phi_i) . grad(phi_j) dV = k * V_e * (grad phi_i . grad phi_j)", BODY_L),
+    P("where shape function gradients grad(phi_i) are constant per element. Convective Robin conditions are integrated "
+      "over boundary triangle faces Gamma: K_ij^{Robin} = h * integral_{Gamma} phi_i * phi_j dA. "
       "Neumann source flux is integrated over source patch triangles. FEM and FVM share the exact same tetrahedral mesh.", BODY),
     SP(0.2),
     P("3.2 · FDM – 7-Point Cartesian Voxel Grid", H2), hr(),
     P("A structured Cartesian grid is generated by ray-casting against the STL geometry. "
       "The 7-point central difference Laplacian for an interior cell P with 6 orthogonal neighbours:", BODY),
-    P("k [ (T<sub>E</sub>−2T<sub>P</sub>+T<sub>W</sub>)/Δx² + (T<sub>N</sub>−2T<sub>P</sub>+T<sub>S</sub>)/Δy² "
-      "+ (T<sub>T</sub>−2T<sub>P</sub>+T<sub>B</sub>)/Δz² ] = 0", BODY_L),
+    P("k [ (T_E - 2*T_P + T_W)/dx^2 + (T_N - 2*T_P + T_S)/dy^2 "
+      "+ (T_T - 2*T_P + T_B)/dz^2 ] = 0", BODY_L),
     P("Boundary faces exposed to convection use ghost-node Robin elimination: "
-      "−k(T<sub>ghost</sub> − T<sub>P</sub>)/Δn = h(T<sub>face</sub> − T∞), yielding modified diagonal conductances. "
+      "-k*(T_ghost - T_P)/dn = h*(T_face - T_inf), yielding modified diagonal conductances. "
       "Tapered fins produce honest staircasing without geometric cut-cell tricks.", BODY),
     SP(0.2),
     P("3.3 · FVM – Cell-Centred Tetrahedral Control Volumes", H2), hr(),
     P("Each tetrahedron is a control volume P. The face flux between adjacent cells P and N sharing face f is:", BODY),
-    P("F<sub>f</sub> = −k (T<sub>N</sub> − T<sub>P</sub>) / d<sub>PN</sub> · A<sub>f</sub> + F<sub>no</sub>", BODY_L),
-    P("where d<sub>PN</sub> = |r<sub>N</sub> − r<sub>P</sub>| and A<sub>f</sub> is the face area. "
+    P("F_f = -k * (T_N - T_P) / d_PN * A_f + F_no", BODY_L),
+    P("where d<sub>PN</sub> = |r_N - r_P| and A<sub>f</sub> is the face area. "
       "The non-orthogonal correction F<sub>no</sub> uses a deferred Green-Gauss gradient reconstruction "
-      "with Jasak-style flux limiting (|F<sub>no</sub>| ≤ 0.3 |F<sub>ortho</sub>|) and under-relaxation α = 0.2. "
+      "with Jasak-style flux limiting (|F_no| <= 0.3 * |F_ortho|) and under-relaxation alpha = 0.2. "
       "Robin and source fluxes are evaluated on boundary faces. FVM shares the tetrahedral mesh with FEM.", BODY),
     PageBreak(),
 ]
@@ -494,10 +494,10 @@ ls_data = [
     ["Parameter", "Implementation Specification"],
     ["Algorithm", "Preconditioned Conjugate Gradient (PCG)"],
     ["Preconditioner", "Incomplete Cholesky IC(0) (zero fill-in, in-place factorization)"],
-    ["Relative convergence tolerance", "‖r‖ / ‖b‖ ≤ 1.0 × 10⁻¹⁰"],
+    ["Relative convergence tolerance", "||r|| / ||b|| <= 1.0e-10"],
     ["Maximum iterations", "10,000 iterations"],
     ["Alternative preconditioner", "Jacobi diagonal scaling (implemented for comparison)"],
-    ["Stationary iterative solver", "Symmetric SOR (SSOR, ω=1.5, implemented for FDM)"],
+    ["Stationary iterative solver", "Symmetric SOR (SSOR, omega=1.5, implemented for FDM)"],
     ["Matrix representation", "Compressed Sparse Row (SparseCsr), 0-based indexing"],
     ["Assembly builder", "SparseBuilder triplet accumulator (sums duplicate entries)"],
     ["Hardware mode", "Single-threaded execution, no third-party linear algebra libraries"],
@@ -506,9 +506,9 @@ story += [
     make_table(ls_data[0], ls_data[1:], col_widths=[6.5*cm, 9.5*cm]),
     SP(0.3),
     P("<b>IC(0) Preconditioner Mechanics:</b> The IC(0) factorisation computes an approximate Cholesky factor L "
-      "such that A ≈ L Lᵀ, retaining strictly the sparsity pattern of A. "
-      "During each PCG iteration, preconditioning solves L y = r (forward substitution) and Lᵀ z = y (backward substitution). "
-      "To safeguard against breakdown on ill-conditioned systems, a modified diagonal perturbation d = max(d, 10⁻¹⁰·A<sub>ii</sub>) "
+      "such that A ~= L * L^T, retaining strictly the sparsity pattern of A. "
+      "During each PCG iteration, preconditioning solves L y = r (forward substitution) and L^T z = y (backward substitution). "
+      "To safeguard against breakdown on ill-conditioned systems, a modified diagonal perturbation d = max(d, 1.0e-10·A<sub>ii</sub>) "
       "ensures positive definiteness throughout the iteration history.", BODY),
     PageBreak(),
 ]
@@ -528,7 +528,7 @@ story += [
 ]
 mod_data = [
     ["Component", "Source Files", "Responsibilities"],
-    ["ThermalProblem", "ThermalProblem.h", "Physics parameters: k, h, T∞, Q, source patch, BC definitions"],
+    ["ThermalProblem", "ThermalProblem.h", "Physics parameters: k, h, T_inf, Q, source patch, BC definitions"],
     ["SparseCsr", "SparseCsr.h/.cpp", "CSR matrix storage, SpMV, SparseBuilder triplet assembly"],
     ["LinearSolvers", "LinearSolvers.h/.cpp", "PCG (IC0 & Jacobi), SSOR, convergence residual tracking"],
     ["Mesh3D", "Mesh3D.h/.cpp", "FemMesh, Gmsh .msh reader, StructuredGrid3D STL voxeliser"],
@@ -554,14 +554,14 @@ story += [
 story += [
     P("6 · Verification &amp; Validation Studies (Round 4)", H1), section_rule(),
     P("6.1 · 1D Slab Analytical Test (Real 3D Prism Implementation)", H2), hr(),
-    P("A 1D-like slab (k = 167 W/mK, L = 4.0 mm) with heat flux q″ = 2500 W/m² at x=0, convection h=10 W/m²K at x=L, "
+    P("A 1D-like slab (k = 167 W/mK, L = 4.0 mm) with heat flux q'' = 2500 W/m² at x=0, convection h=10 W/m²K at x=L, "
       "and insulated lateral sides is solved using the real 3D FEM, FDM, and FVM solvers on a 40×2×2 prism grid. "
-      "Errors are physically normalised as (T<sub>num</sub> − T<sub>exact</sub>)/(T<sub>exact</sub> − T<sub>∞</sub>) without derived multipliers:", BODY),
+      "Errors are physically normalised as (T_num - T_exact) / (T_exact - T_inf) without derived multipliers:", BODY),
 ]
 val_1d = [
-    ["Solver", "Relative L₂ Error", "Relative L_inf Error", "Max Absolute Error", "Acceptance Threshold", "Status"],
-    ["FEM",    "1.49 × 10⁻⁹ %",    "1.50 × 10⁻⁹ %",       "6.01 × 10⁻¹⁰ K",     "< 1.0%",               "PASS"],
-    ["FDM",    "5.39 × 10⁻⁹ %",    "5.39 × 10⁻⁹ %",       "2.16 × 10⁻⁹ K",      "< 1.0%",               "PASS"],
+    ["Solver", "Relative L2 Error", "Relative L_inf Error", "Max Absolute Error", "Acceptance Threshold", "Status"],
+    ["FEM",    "1.49e-9 %",    "1.50e-9 %",       "6.01e-10 K",     "< 1.0%",               "PASS"],
+    ["FDM",    "5.39e-9 %",    "5.39e-9 %",       "2.16e-9 K",      "< 1.0%",               "PASS"],
     ["FVM",    "0.98%",            "1.70%",               "0.685 K",            "< 2.0%",               "PASS"],
 ]
 story += [
@@ -569,14 +569,14 @@ story += [
                extra_style=[("TEXTCOLOR",(5,1),(5,-1), GREEN)]),
     SP(0.2),
     P("6.2 · 3D Manufactured-Solution Convergence Test (Real Solvers on Cube)", H2), hr(),
-    P("A harmonic polynomial field T(x,y,z) = 300 + 20(2x²−y²−z²)/L² + 1.5(x⁴−6x²y²+y⁴)/L⁴ is solved across three grid refinement levels (r=2) "
-      "using real 3D solver output with matching Dirichlet boundaries. Observed orders p = ln(e₁/e₂) / ln(r) are measured directly:", BODY),
+    P("A harmonic polynomial field T(x,y,z) = 300 + 20*(2*x^2 - y^2 - z^2)/L^2 + 1.5*(x^4 - 6*x^2*y^2 + y^4)/L^4 is solved across three grid refinement levels (r=2) "
+      "using real 3D solver output with matching Dirichlet boundaries. Observed orders p = ln(e1/e2) / ln(r) are measured directly:", BODY),
 ]
 val_mms = [
-    ["Solver", "Coarse L₂", "Medium L₂", "Fine L₂", "Observed Order p", "Criterion", "Status"],
-    ["FEM",    "5.97 × 10⁻³", "1.91 × 10⁻³", "5.31 × 10⁻⁴", "p = 1.85", "p ≥ 1.5 (O(h²))", "PASS"],
-    ["FDM",    "1.63 × 10⁻¹", "5.55 × 10⁻²", "1.53 × 10⁻²", "p = 1.86", "p ≥ 1.5 (O(h²))", "PASS"],
-    ["FVM",    "1.22",        "0.702",       "0.385",       "p = 0.87", "p ≥ 0.75 (O(h))", "PASS"],
+    ["Solver", "Coarse L2", "Medium L2", "Fine L2", "Observed Order p", "Criterion", "Status"],
+    ["FEM",    "5.97e-3", "1.91e-3", "5.31e-4", "p = 1.85", "p >= 1.5 (O(h^2))", "PASS"],
+    ["FDM",    "1.63e-1", "5.55e-2", "1.53e-2", "p = 1.86", "p >= 1.5 (O(h^2))", "PASS"],
+    ["FVM",    "1.22",        "0.702",       "0.385",       "p = 0.87", "p >= 0.75 (O(h))", "PASS"],
 ]
 story += [
     make_table(val_mms[0], val_mms[1:], col_widths=[2.2*cm, 2.6*cm, 2.6*cm, 2.6*cm, 2.8*cm, 2.8*cm, 1.9*cm],
@@ -603,11 +603,11 @@ story += [
     SP(0.2),
     P("6.4 · General 3-Grid Richardson Extrapolation &amp; Grid Convergence Index (GCI)", H2), hr(),
     P("Following strict Roache/ASME criteria without clamping p or taking absolute values of the log ratio, observed order p is computed "
-      "only when values converge monotonically with decreasing differences (|e₂₁| &lt; |e₃₂|, same sign). Otherwise, quantities are marked "
+      "only when values converge monotonically with decreasing differences (|e21| &lt; |e32|, same sign). Otherwise, quantities are marked "
       "as non-monotonic. Consensus reference is rebuilt exclusively from valid monotonic extrapolations and Finer FEM cross-check:", BODY),
 ]
 val_gci = [
-    ["Solver", "Quantity", "Coarse", "Medium", "Fine", "Extrapolated", "GCI₂₁", "Observed Order", "Status"],
+    ["Solver", "Quantity", "Coarse", "Medium", "Fine", "Extrapolated", "GCI_21", "Observed Order", "Status"],
     ["FEM", "T_max", "60.51 °C", "60.58 °C", "60.83 °C", "N/A", "N/A", "Non-monotonic", "NON-MONOTONIC"],
     ["FEM", "T_avg", "56.57 °C", "56.57 °C", "56.57 °C", "N/A", "N/A", "Non-monotonic", "NON-MONOTONIC"],
     ["FDM", "T_max", "59.81 °C", "60.40 °C", "60.36 °C", "N/A", "N/A", "Non-monotonic", "NON-MONOTONIC"],
@@ -625,7 +625,7 @@ story += [
       "• <b>T_max Consensus: UNAVAILABLE.</b> No solver satisfied monotonic asymptotic convergence for T_max due to steep localized source-patch gradients. "
       "In accordance with rigorous V&amp;V standards, consensus is reported as unavailable rather than substituting finer-grid runs. "
       "An independent Finer FEM mesh (23.9k nodes) is provided strictly as a separate cross-check (<b>60.8134 °C</b>).<br/>"
-      "• <b>T_avg Extrapolation:</b> Only FDM converges monotonically (p=6.42, GCI₂₁=0.00057%) to <b>56.1584 °C</b>. "
+      "• <b>T_avg Extrapolation:</b> Only FDM converges monotonically (p=6.42, GCI_21=0.00057%) to <b>56.1584 °C</b>. "
       "This is classified strictly as a <b>single-method extrapolation</b>, not a cross-solver consensus, because FEM and FVM volume-weighted averages exhibit sub-tenth-degree non-monotonicity across these three grids. "
       "The independent Finer FEM cross-check confirms T_avg = 56.5704 °C (diff = 0.412 °C vs FDM).<br/>"
       "• <b>Audit and Resolution of Disputed Historical Values (61.0295, 60.3265, 60.5567 °C):</b> A comprehensive Git history audit traced these values directly to commit <code>7c6eef3</code>. "
@@ -638,27 +638,27 @@ story += [
     P("A comprehensive audit of the FVM formulation across Coarse, Medium, and Fine levels demonstrates matrix symmetry, preconditioner stability, and correction sensitivity:", BODY),
 ]
 fvm_audit_tbl = [
-    ["Mesh Level", "DOF", "||A−Aᵀ||/||A||", "Min Diagonal", "IC(0) Fallbacks", "Correction ON (Tmax)", "Correction OFF (Tmax)", "ΔTmax"],
-    ["Coarse", "8,249",  "0.00 × 10⁰ (symmetric)", "0.577 W/K", "0 (clean)", "61.5916 °C", "61.5908 °C", "+0.0007 °C"],
-    ["Medium", "16,134", "0.00 × 10⁰ (symmetric)", "0.430 W/K", "0 (clean)", "62.0781 °C", "62.0949 °C", "−0.0168 °C"],
-    ["Fine",   "36,671", "0.00 × 10⁰ (symmetric)", "0.300 W/K", "0 (clean)", "61.2329 °C", "61.2693 °C", "−0.0364 °C"],
+    ["Mesh Level", "DOF", "||A - A^T|| / ||A||", "Min Diagonal", "IC(0) Fallbacks", "Correction ON (Tmax)", "Correction OFF (Tmax)", "Delta Tmax"],
+    ["Coarse", "8,249",  "0.00 (symmetric)", "0.577 W/K", "0 (clean)", "61.5916 °C", "61.5908 °C", "+0.0007 °C"],
+    ["Medium", "16,134", "0.00 (symmetric)", "0.430 W/K", "0 (clean)", "62.0781 °C", "62.0949 °C", "-0.0168 °C"],
+    ["Fine",   "36,671", "0.00 (symmetric)", "0.300 W/K", "0 (clean)", "61.2329 °C", "61.2693 °C", "-0.0364 °C"],
 ]
 story += [
     make_table(fvm_audit_tbl[0], fvm_audit_tbl[1:], col_widths=[2.0*cm, 1.8*cm, 3.2*cm, 2.2*cm, 2.2*cm, 2.5*cm, 2.5*cm, 2.1*cm]),
     SP(0.1),
     P("<b>Rigorous PCG Positive-Definiteness Guarantee:</b> Preconditioned Conjugate Gradient requires a symmetric positive-definite (SPD) system matrix A. "
-      "The FVM orthogonal diffusion operator produces exact symmetry A_PN = −k A_f / d_PN = A_NP (||A − A^T|| / ||A|| = 0.00). "
+      "The FVM orthogonal diffusion operator produces exact symmetry A_PN = -k * A_f / d_PN = A_NP (||A - A^T|| / ||A|| = 0.00). "
       "Crucially, positive diagonal entries alone (A_PP > 0) do not mathematically establish positive definiteness. "
       "Here, positive definiteness is strictly guaranteed by the Gershgorin circle theorem: interior rows satisfy sum_N |A_PN| = A_PP, "
       "while convective Robin boundary faces add strictly positive conductance g_b = h A_b > 0, ensuring strict diagonal dominance on boundary rows. "
       "Because the tetrahedral mesh graph is connected (irreducible), A is irreducibly diagonally dominant with positive diagonals, "
-      "which mathematically guarantees that all eigenvalues λ_i > 0, ensuring robust, breakdown-free PCG convergence.", BODY),
+      "which mathematically guarantees that all eigenvalues lambda_i > 0, ensuring robust, breakdown-free PCG convergence.", BODY),
     SP(0.1),
-    P("<b>Physical Cause of FVM Tmax Exceeding FEM Tmax Near Source Patch:</b> At the Fine level, FVM Tmax is 61.23 °C vs FEM Tmax of 60.83 °C (Δ = +0.40 °C). "
-      "Investigation reveals that FEM distributes surface Neumann flux variationally across 3 nodes (q·A/3), diffusing heat smoothly across all elements sharing those nodes. "
-      "FVM deposits the entire boundary face flux directly into the single adjacent control volume cell (b_P += q·A). In the patch zone, "
-      "tetrahedral cell volumes vary by a factor of 5.80× (5.23 × 10⁻¹⁰ to 3.03 × 10⁻⁹ m³) due to geometric boundary refinement (mean radius ratio remains healthy at 0.83; "
-      "these are graded elements, not degenerate geometric slivers), resulting in localized cell-centered volumetric heating (q·A/V_P). "
+    P("<b>Physical Cause of FVM Tmax Exceeding FEM Tmax Near Source Patch:</b> At the Fine level, FVM Tmax is 61.23 °C vs FEM Tmax of 60.83 °C (Delta = +0.40 °C). "
+      "Investigation reveals that FEM distributes surface Neumann flux variationally across 3 nodes (q*A/3), diffusing heat smoothly across all elements sharing those nodes. "
+      "FVM deposits the entire boundary face flux directly into the single adjacent control volume cell (b_P += q*A). In the patch zone, "
+      "tetrahedral cell volumes vary by a factor of 5.80× (5.23e-10 to 3.03e-9 m^3) due to geometric boundary refinement (mean radius ratio remains healthy at 0.83; "
+      "these are graded elements, not degenerate geometric slivers), resulting in localized cell-centered volumetric heating (q*A/V_P). "
       "Sampling identical physical points near the patch confirms this gradient: Probes 9–12 exhibit differences of 0.47 °C to 0.68 °C "
       "(Probe 9: FEM 60.37 vs FVM 60.98 °C; Probe 10: 59.68 vs 60.15 °C; Probe 11: 59.25 vs 59.84 °C; Probe 12: 59.19 vs 59.87 °C), "
       "directly matching the localized numerical flux deposition mechanism.", BODY),
@@ -677,7 +677,7 @@ story += [
     P("<b>Summary of Verification Findings:</b> All three numerical methods satisfy rigorous verification standards. "
       "Spatial convergence rates confirm second-order accuracy for FEM (p=1.85) and FDM (p=1.86), while FVM achieves p=0.87 "
       "reflecting the first-order boundary discretization on skewed unstructured tets. Pairwise probe RMSEs remain below 0.55 °C across all solver pairs, "
-      "and energy balance is satisfied across all solvers with a maximum recorded relative error of 7.5602×10⁻¹¹ (FEM and FVM achieve machine precision < 6.0×10⁻¹³).", BODY),
+      "and energy balance is satisfied across all solvers with a maximum recorded relative error of 7.5602e-11 (FEM and FVM achieve machine precision < 6.0×1.0e-13).", BODY),
     PageBreak(),
 ]
 
@@ -711,7 +711,7 @@ story += [
       "(FEM: 56.5700 °C, FDM: 56.1581 °C, FVM: 56.6084 °C), with FEM and FVM agreeing within 0.04 °C. "
       "Unweighted arithmetic averages are shown alongside for full transparency (FEM: 56.4492 °C, FDM: 56.1581 °C, FVM: 56.5120 °C); "
       "volume weighting is essential because unstructured tet element volumes vary across the domain. "
-      "Energy balance error is bounded below 1.3×10⁻¹¹ across all 9-fin configurations.", BODY),
+      "Energy balance error is bounded below 1.3e-11 across all 9-fin configurations.", BODY),
     PageBreak(),
 ]
 
@@ -764,7 +764,7 @@ story += [
     SP(0.3),
     P("<b>Analysis of Geometric Disadvantage:</b> On the solid cube, FDM achieves full geometric fidelity because boundaries "
       "align with grid planes. However, Cartesian voxelisation requires uniform cell spacing, causing DOF count to scale cubically "
-      "(O(N³)). At fine resolution, FDM requires 1,409,400 DOFs compared to 5,530 DOFs for FEM and 26,847 for FVM, "
+      "(O(N^3)). At fine resolution, FDM requires 1,409,400 DOFs compared to 5,530 DOFs for FEM and 26,847 for FVM, "
       "resulting in 250× higher runtime and 57× higher memory consumption for comparable temperature accuracy.", BODY),
     PageBreak(),
 ]
@@ -806,7 +806,7 @@ story += [
     P("<b>Cross-Section Thermal Comparison (Fine Level, Case A):</b>", BODY),
 ]
 temp_data = [
-    ["Solver", "DOF", "T_min (°C)", "T_max (°C)", "T_avg (vol) (°C)", "T_avg (raw) (°C)", "T_src (°C)", "Fin Drop ΔT (°C)"],
+    ["Solver", "DOF", "T_min (°C)", "T_max (°C)", "T_avg (vol) (°C)", "T_avg (raw) (°C)", "T_src (°C)", "Fin Drop Delta T (°C)"],
 ]
 for slv in ["FEM","FDM","FVM"]:
     r = hs_case(slv, "A", "9Fins_Fine")
@@ -819,7 +819,7 @@ story += [
     make_table(temp_data[0], temp_data[1:], col_widths=[1.8*cm,2.2*cm,2.2*cm,2.2*cm,2.3*cm,2.3*cm,2.2*cm,2.2*cm]),
     SP(0.2),
     P("<b>Field Observations:</b> Heat spreads outward from the offset patch into the 4 mm base plate before conducting "
-      "upwards into the 9 tapered fins. The fin temperature drop ΔT ≈ 5.9 °C illustrates high fin efficiency (η > 95%), "
+      "upwards into the 9 tapered fins. The fin temperature drop Delta T ~= 5.9 °C illustrates high fin efficiency (eta > 95%), "
       "attributable to aluminium's high thermal conductivity (167 W/mK).", BODY),
     PageBreak(),
 ]
@@ -835,10 +835,10 @@ story += [
     SP(0.3),
     P("<b>Thermal Dissipation &amp; Convective Area Comparison:</b> Convective heat loss occurs strictly through boundary faces with Robin convection "
       "(excluding the 100.00 mm² heat source patch and 3,500.00 mm² adiabatic base underside). On the solid cube (60×60×60 mm), the exposed convective area is "
-      "5 × (0.060×0.060) = 18,000.00 mm² (0.018000 m²), producing a theoretical film temperature rise of ΔT = Q / (h·A<sub>conv</sub>) = 10 / (10 × 0.018) = 55.56 K "
+      "5 × (0.060×0.060) = 18,000.00 mm² (0.018000 m²), producing a theoretical film temperature rise of Delta T = Q / (h*A_conv) = 10 / (10 × 0.018) = 55.56 K "
       "(predicting T<sub>film</sub> = 80.56 °C, matching measured T<sub>avg</sub> = 80.65 °C). "
       "The 9-fin heat sink expands exposed convective area to 31,851.46 mm² (0.0318515 m², a 1.7695× / +76.95% increase; total STL surface area is 35,451.46 mm²). "
-      "This reduces the theoretical film rise to ΔT = 10 / (10 × 0.0318515) = 31.40 K (predicting T<sub>film</sub> = 56.40 °C, closely matching FEM Fine T<sub>avg</sub> = 56.57 °C), "
+      "This reduces the theoretical film rise to Delta T = 10 / (10 × 0.0318515) = 31.40 K (predicting T<sub>film</sub> = 56.40 °C, closely matching FEM Fine T<sub>avg</sub> = 56.57 °C), "
       "dropping peak operating temperature from 83.16 °C down to 60.83 °C.", BODY),
     PageBreak(),
 ]
@@ -876,7 +876,7 @@ perf_data = [
     ["Peak Temperature T_max", "60.83 °C", "60.36 °C", "61.23 °C"],
     ["Volume-Weighted T_avg (vol)", "56.57 °C", "56.16 °C", "56.61 °C"],
     ["Unweighted T_avg (raw)", "56.45 °C", "56.16 °C", "56.51 °C"],
-    ["Relative Energy Balance Error", "3.19 × 10⁻¹³", "2.52 × 10⁻¹²", "3.48 × 10⁻¹⁴"],
+    ["Relative Energy Balance Error", "3.19 × 1.0e-13", "2.52e-12", "3.48 × 1.0e-14"],
 ]
 story += [
     make_table(perf_data[0], perf_data[1:], col_widths=[5.0*cm, 4.0*cm, 4.5*cm, 4.0*cm]),
@@ -918,7 +918,7 @@ story += [
     P("<b>Non-Orthogonality Considerations:</b> Tetrahedra near the acute 1.2 mm fin tips exhibit non-orthogonality up to 58.36° on the fine mesh "
       "(63.21° on coarse, 58.46° on medium), while the domain-wide mean non-orthogonality drops from 27.16° down to 16.82° with grid refinement. "
       "The deferred Green-Gauss correction in FVM successfully prevents numerical instability while preserving conservation, "
-      "as confirmed by the FVM energy balance error of 3.5×10⁻¹⁴.", BODY),
+      "as confirmed by the FVM energy balance error of 3.5e-14.", BODY),
     PageBreak(),
 ]
 
@@ -933,14 +933,14 @@ disc_data = [
     ["Evaluation Criterion", "FEM (Galerkin)", "FDM (Voxel)", "FVM (Cell-Centred)"],
     ["Boundary conformance", "Exact (conforming tet)", "Staircase (voxel steps)", "Exact (shared tet)"],
     ["Degrees of Freedom (Fine)", "11,799", "487,620 (41×)", "36,671 (3.1×)"],
-    ["Volume-Weighted T_avg", "56.57 °C (Ref)", "56.16 °C (−0.41 °C)", "56.61 °C (+0.04 °C)"],
+    ["Volume-Weighted T_avg", "56.57 °C (Ref)", "56.16 °C (-0.41 °C)", "56.61 °C (+0.04 °C)"],
     ["Unweighted T_avg (raw)", "56.45 °C", "56.16 °C", "56.51 °C"],
-    ["Peak temperature T_max", "60.83 °C (Ref)", "60.36 °C (−0.47 °C)", "61.23 °C (+0.40 °C)"],
+    ["Peak temperature T_max", "60.83 °C (Ref)", "60.36 °C (-0.47 °C)", "61.23 °C (+0.40 °C)"],
     ["Total wall runtime", "256.4 ms (1.0×)", "18,656.3 ms (72.8×)", "2,745.8 ms (10.7×)"],
     ["Peak process memory", "24.5 MB (1.0×)", "320.5 MB (13.1×)", "35.5 MB (1.4×)"],
-    ["Observed convergence order", "p = 1.85 (O(h²))", "p = 1.86 (O(h²))", "p = 0.87 (O(h) tets)"],
+    ["Observed convergence order", "p = 1.85 (O(h^2))", "p = 1.86 (O(h^2))", "p = 0.87 (O(h) tets)"],
     ["PCG iterations (Fine)", "174", "684", "1,288"],
-    ["Energy conservation error", "< 6.0 × 10⁻¹³", "< 7.56 × 10⁻¹¹", "< 3.5 × 10⁻¹³"],
+    ["Energy conservation error", "< 6.0 × 1.0e-13", "< 7.56e-11", "< 3.5 × 1.0e-13"],
     ["Implementation complexity", "High (weak integrals)", "Low (stencil / voxel)", "High (non-ortho corr.)"],
 ]
 story += [
@@ -950,11 +950,11 @@ story += [
     P("1. <b>FEM is the optimal choice for thermal heat sink analysis:</b> Conforming P1 tetrahedral elements capture the tapered "
       "geometry exactly with 41× fewer DOFs than FDM, achieving the fastest runtime (256.4 ms) and smallest memory footprint (24.5 MB).", BODY_L),
     P("2. <b>FVM provides rigorous local conservation on unstructured grids:</b> Cell-centred FVM achieves machine-level energy balance "
-      "(3.5×10⁻¹⁴) on the identical mesh as FEM. Non-orthogonal face angles increase iteration counts, with sub-3-second total runtime (2,745.8 ms).", BODY_L),
+      "(3.5e-14) on the identical mesh as FEM. Non-orthogonal face angles increase iteration counts, with sub-3-second total runtime (2,745.8 ms).", BODY_L),
     P("3. <b>FDM suffers a severe geometric penalty on tapered geometries:</b> While simple to code, Cartesian voxelisation requires massive "
       "grid over-refinement (487k cells) to resolve 1.2 mm fin tips, incurring 72.8× higher computational cost (18.66 s) and a slight ~0.4 °C cold bias.", BODY_L),
     P("4. <b>Verification confirms production-grade fidelity:</b> Real 3D manufactured-solution convergence orders (FEM p=1.85, FDM p=1.86, FVM p=0.87), "
-      "pairwise probe RMSE (<0.55 °C across all solver pairs), and maximum energy balance error bounded at 7.5602×10⁻¹¹ "
+      "pairwise probe RMSE (<0.55 °C across all solver pairs), and maximum energy balance error bounded at 7.5602e-11 "
       "prove that THERMATRIX provides rigorous, mesh-independent thermal predictive capability.", BODY_L),
     PageBreak(),
 ]
@@ -1013,20 +1013,20 @@ story += [
     P("12.3 · Energy Conservation Verification Across Solvers", H2), hr(),
     P("Thermal energy conservation is checked for every solver and grid resolution by calculating the relative residual:", BODY),
     SP(0.1),
-    P("Q<sub>balance_rel</sub> = | Q<sub>in</sub> − Q<sub>conv</sub> | / Q<sub>in</sub> = | 10.0 − ∬<sub>Γ</sub> h (T − T∞) dA | / 10.0", BODY_L),
+    P("Q<sub>balance_rel</sub> = | Q<sub>in</sub> - Q<sub>conv</sub> | / Q<sub>in</sub> = | 10.0 - integral_{Gamma} h (T - T_inf) dA | / 10.0", BODY_L),
     SP(0.1),
     P("In an exact steady state, the heat injected at the underside source patch must equal the convective heat removed "
       "by the surrounding ambient air. The measured relative energy balance error across all benchmark levels:", BODY),
     SP(0.2),
 ]
 story += fig(VIZ/"Benchmark_Charts"/"energy_balance_error.png", width=15.5*cm, max_height=10.0*cm,
-             caption="Figure A.1 – Relative energy balance error |Q_in − Q_conv| / Q_in for all solvers and grid levels (Case A). "
-                     "Every configuration satisfies energy balance well below the linear solver convergence tolerance (10⁻¹⁰).")
+             caption="Figure A.1 – Relative energy balance error |Q_in - Q_conv| / Q_in for all solvers and grid levels (Case A). "
+                     "Every configuration satisfies energy balance well below the linear solver convergence tolerance (1.0e-10).")
 story += [
     SP(0.3),
-    P("<b>Conservation Conclusion:</b> FEM and FVM achieve machine-precision energy conservation (relative error ≈ 10⁻¹³ to 10⁻¹⁴). "
-      "FDM achieves relative energy balance error below 7.5602×10⁻¹¹ across all 33 benchmark runs (specifically 7.5602×10⁻¹¹ for Cube Fine Case A, "
-      "and 2.52×10⁻¹² for 9-Fin Fine Case A), demonstrating that the ghost-node Robin boundary conditions "
+    P("<b>Conservation Conclusion:</b> FEM and FVM achieve machine-precision energy conservation (relative error ~= 1.0e-13 to 1.0e-14). "
+      "FDM achieves relative energy balance error below 7.5602e-11 across all 33 benchmark runs (specifically 7.5602e-11 for Cube Fine Case A, "
+      "and 2.52e-12 for 9-Fin Fine Case A), demonstrating that the ghost-node Robin boundary conditions "
       "correctly account for heat flux through staircase boundaries.", BODY),
 ]
 
