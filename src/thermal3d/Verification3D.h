@@ -19,10 +19,30 @@ namespace t3d {
 struct ProbePoint3D {
     std::string name;
     Point3D     coord;
-    double      T_fem { 0.0 };
-    double      T_fdm { 0.0 };
-    double      T_fvm { 0.0 };
-    double      T_ref { 0.0 }; // Extrapolated / fine reference
+
+    // Multi-level samples across Coarse, Medium, Fine
+    double T_fem_c{0.0}, T_fem_m{0.0}, T_fem_f{0.0};
+    double T_fdm_c{0.0}, T_fdm_m{0.0}, T_fdm_f{0.0};
+    double T_fvm_c{0.0}, T_fvm_m{0.0}, T_fvm_f{0.0};
+
+    // Richardson-extrapolated value per method across the 3 levels
+    double T_extrap_fem{0.0};
+    double T_extrap_fdm{0.0};
+    double T_extrap_fvm{0.0};
+
+    // Consensus reference = mean of the 3 extrapolated values
+    double T_consensus{0.0};
+    // Spread across methods = max(extrap) - min(extrap)
+    double spread{0.0};
+
+    // Labelled cross-check: Finer FEM run (20k+ nodes)
+    double T_fem_finer{0.0};
+
+    // Backward compatibility aliases (fine level values and consensus ref)
+    double T_fem{0.0};
+    double T_fdm{0.0};
+    double T_fvm{0.0};
+    double T_ref{0.0};
 };
 
 struct GciResult {
@@ -39,21 +59,52 @@ struct GciResult {
 };
 
 struct VerificationSuiteResult {
-    // 1. 1D Slab Test
+    // 1. 1D Slab Test (physically normalised: err = (T_num - T_exact)/(T_exact - T_inf))
     double slab_L2_fem { 0.0 };
     double slab_L2_fdm { 0.0 };
     double slab_L2_fvm { 0.0 };
+    double slab_Linf_fem { 0.0 };
+    double slab_Linf_fdm { 0.0 };
+    double slab_Linf_fvm { 0.0 };
+    double slab_abs_K_fem { 0.0 };
+    double slab_abs_K_fdm { 0.0 };
+    double slab_abs_K_fvm { 0.0 };
 
-    // 2. Manufactured Solution Order
+    // 2. Manufactured Solution Order and actual errors across 3 levels
     double mms_order_fem { 0.0 };
     double mms_order_fdm { 0.0 };
     double mms_order_fvm { 0.0 };
+    double mms_e1_fem{0.0}, mms_e2_fem{0.0}, mms_e3_fem{0.0};
+    double mms_e1_fdm{0.0}, mms_e2_fdm{0.0}, mms_e3_fdm{0.0};
+    double mms_e1_fvm{0.0}, mms_e2_fvm{0.0}, mms_e3_fvm{0.0};
 
     // 3. 30 Fixed Probe Points
     std::vector<ProbePoint3D> probes;
+
+    // Pairwise RMSE between all solver pairs at Fine level
+    double rmse_fem_fdm { 0.0 };
+    double rmse_fem_fvm { 0.0 };
+    double rmse_fdm_fvm { 0.0 };
+
+    // Each solver's RMSE versus the consensus reference
+    double rmse_fem_vs_consensus { 0.0 };
+    double rmse_fdm_vs_consensus { 0.0 };
+    double rmse_fvm_vs_consensus { 0.0 };
+
+    // Labelled cross-check: finer FEM vs consensus
+    double rmse_finer_fem_vs_consensus { 0.0 };
+
+    // Backward compatibility aliases
     double rmse_fem { 0.0 };
     double rmse_fdm { 0.0 };
     double rmse_fvm { 0.0 };
+
+    // Consensus for T_max and T_avg
+    double tmax_extrap_fem{0.0}, tmax_extrap_fdm{0.0}, tmax_extrap_fvm{0.0};
+    double tmax_consensus{0.0}, tmax_spread{0.0}, tmax_fem_finer{0.0};
+
+    double tavg_extrap_fem{0.0}, tavg_extrap_fdm{0.0}, tavg_extrap_fvm{0.0};
+    double tavg_consensus{0.0}, tavg_spread{0.0}, tavg_fem_finer{0.0};
 
     // 4. Richardson Extrapolation & GCI
     std::vector<GciResult> gci_results;

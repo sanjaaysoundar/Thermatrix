@@ -72,9 +72,33 @@ void test_gci_and_probes() {
               << "    FDM: " << suite.rmse_fdm << " C\n"
               << "    FVM: " << suite.rmse_fvm << " C\n";
 
-    ASSERT_TRUE(suite.rmse_fem < 2.0, "FEM probe RMSE < 2.0 °C vs fine reference");
-    ASSERT_TRUE(suite.rmse_fdm < 2.5, "FDM probe RMSE < 2.5 °C vs fine reference");
-    ASSERT_TRUE(suite.rmse_fvm < 2.0, "FVM probe RMSE < 2.0 °C vs fine reference");
+    ASSERT_TRUE(suite.rmse_fem < 2.0, "FEM probe RMSE < 2.0 °C vs consensus reference");
+    ASSERT_TRUE(suite.rmse_fdm < 2.5, "FDM probe RMSE < 2.5 °C vs consensus reference");
+    ASSERT_TRUE(suite.rmse_fvm < 2.0, "FVM probe RMSE < 2.0 °C vs consensus reference");
+
+    std::cout << "\n  Pairwise RMSE Between Solver Pairs (Fine Level):\n"
+              << "    FEM vs FDM: " << suite.rmse_fem_fdm << " C\n"
+              << "    FEM vs FVM: " << suite.rmse_fem_fvm << " C\n"
+              << "    FDM vs FVM: " << suite.rmse_fdm_fvm << " C\n";
+
+    std::cout << "\n  Solver RMSE Versus Consensus Reference:\n"
+              << "    FEM vs Consensus:       " << suite.rmse_fem_vs_consensus << " C\n"
+              << "    FDM vs Consensus:       " << suite.rmse_fdm_vs_consensus << " C\n"
+              << "    FVM vs Consensus:       " << suite.rmse_fvm_vs_consensus << " C\n"
+              << "    Finer FEM vs Consensus: " << suite.rmse_finer_fem_vs_consensus << " C (labelled cross-check)\n";
+
+    std::cout << "\n  Consensus Extrapolated Temperatures:\n"
+              << "    T_max: Extrapolated FEM=" << suite.tmax_extrap_fem << " C, FDM=" << suite.tmax_extrap_fdm
+              << " C, FVM=" << suite.tmax_extrap_fvm << " C\n"
+              << "           Consensus Mean=" << suite.tmax_consensus << " C, Spread=" << suite.tmax_spread << " C\n"
+              << "           Finer FEM CrossCheck=" << suite.tmax_fem_finer << " C (diff=" << std::abs(suite.tmax_fem_finer - suite.tmax_consensus) << " C)\n"
+              << "    T_avg: Extrapolated FEM=" << suite.tavg_extrap_fem << " C, FDM=" << suite.tavg_extrap_fdm
+              << " C, FVM=" << suite.tavg_extrap_fvm << " C\n"
+              << "           Consensus Mean=" << suite.tavg_consensus << " C, Spread=" << suite.tavg_spread << " C\n"
+              << "           Finer FEM CrossCheck=" << suite.tavg_fem_finer << " C (diff=" << std::abs(suite.tavg_fem_finer - suite.tavg_consensus) << " C)\n";
+
+    ASSERT_TRUE(suite.tmax_spread < 3.0, "Consensus T_max spread across methods < 3.0 °C");
+    ASSERT_TRUE(suite.tavg_spread < 1.5, "Consensus T_avg spread across methods < 1.5 °C");
 
     ASSERT_TRUE(!suite.gci_results.empty(), "GCI results populated");
     std::cout << "\n  Grid Convergence Index (GCI) Summary:\n";

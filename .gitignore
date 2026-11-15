@@ -1,12 +1,16 @@
 # Build artifacts
 build/
+bin/
 CMakeFiles/
 *.obj
 *.o
 *.a
 *.pdb
+*.exe
 
 # IDE temporary files
 .vscode/.browse*
 *.tmp
 *.log
+__pycache__/
+*.pyc
