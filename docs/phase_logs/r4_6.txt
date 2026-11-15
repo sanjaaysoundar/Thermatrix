@@ -1,0 +1,39 @@
+r4-6: Trilinear FDM & Green-Gauss FVM Probe Interpolation
+============================================================
+
+1. Implementation:
+- FDM Probe Sampling (`sample_fdm`):
+  Replaced nearest-cell lookup with true 8-point trilinear interpolation in
+  cell-centered coordinates. For probe locations near staircase solid boundaries,
+  non-solid cells in the 8-corner stencil are substituted by the nearest solid cell
+  among the corners, preventing extrapolation outside the domain while preserving
+  linear convergence in solid interiors.
+- FVM Probe Sampling (`sample_fvm`):
+  Replaced piecewise-constant cell value with cell value plus Green-Gauss gradient
+  correction: T(pt) ≈ T_P + ∇T_P · (pt - x_P), where ∇T_P = (1/V_P) ∑_f T_face * S_f.
+  Face values are reconstructed by averaging adjacent cell centroids.
+- Sampling methods explicitly recorded in `results/validation_results.csv`:
+  * FEM: barycentric interpolation over containing tetrahedron
+  * FDM: trilinear interpolation (nearest solid near staircase)
+  * FVM: cell value plus Green-Gauss gradient correction
+
+2. Verification Results:
+  Sampled 30 Probe Temperatures (Medium Level):
+    Probe_1 at (5, 5, 2) mm: FEM=56.0932 C, FDM=55.628 C, FVM=56.0209 C, Ref=55.9115 C
+    Probe_2 at (55, 5, 2) mm: FEM=55.5649 C, FDM=55.1218 C, FVM=55.4678 C, Ref=55.3797 C
+    Probe_3 at (5, 55, 2) mm: FEM=57.4028 C, FDM=56.9906 C, FVM=57.5612 C, Ref=57.3338 C
+    Probe_4 at (55, 55, 2) mm: FEM=56.353 C, FDM=55.9604 C, FVM=56.4504 C, Ref=56.2556 C
+    Probe_5 at (30, 5, 2) mm: FEM=55.8934 C, FDM=55.4359 C, FVM=55.8065 C, Ref=55.7081 C
+    ... (30 probes total)
+
+  Probe RMSE vs Consensus Ref:
+    FEM: 0.137473 °C (< 2.0 °C threshold: PASS)
+    FDM: 0.314527 °C (< 2.5 °C threshold: PASS)
+    FVM: 0.244902 °C (< 2.0 °C threshold: PASS)
+
+  Pairwise RMSE Between Solver Pairs (Fine Level):
+    FEM vs FDM: 0.415642 °C (< 3.0 °C threshold: PASS)
+    FEM vs FVM: 0.249764 °C (< 3.0 °C threshold: PASS)
+    FDM vs FVM: 0.545928 °C (< 3.0 °C threshold: PASS)
+
+100% tests passed (8/8).
