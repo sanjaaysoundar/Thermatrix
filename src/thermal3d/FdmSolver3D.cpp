@@ -143,7 +143,8 @@ SolverResult FdmSolver3D::solve(const StructuredGrid3D& grid,
     }
     result.T_min = t_min;
     result.T_max = t_max;
-    result.T_avg = t_sum / n;
+    result.T_avg_raw = t_sum / n;
+    result.T_avg = result.T_avg_raw; // uniform grid cells => volume-weighted == raw average
 
     double src_t_sum = 0.0;
     double src_area_sum = 0.0;
@@ -178,6 +179,88 @@ SolverResult FdmSolver3D::solve(const StructuredGrid3D& grid,
     result.t_post_ms = std::chrono::duration<double, std::milli>(t_post_1 - t_post_0).count();
     result.t_total_ms = result.t_mesh_ms + result.t_assemble_ms + result.t_solve_ms + result.t_post_ms;
 
+    return result;
+}
+
+SolverResult FdmSolver3D::solve_mms(
+    const StructuredGrid3D& grid,
+    const std::function<double(double, double, double)>& T_exact,
+    const SolverParams& lparams) {
+    SolverResult result;
+    result.solver_name = "FDM";
+    result.case_label = "MMS";
+    result.n_dof = grid.n_solid_cells();
+    result.n_elements = grid.n_solid_cells();
+
+    int n = grid.n_solid_cells();
+    if (n == 0) {
+        result.success = false;
+        result.error_message = "Empty FDM grid";
+        return result;
+    }
+
+    auto t_as_0 = Clock::now();
+    SparseBuilder builder(n, n);
+    std::vector<double> b(n, 0.0);
+
+    // Internal faces
+    for (const auto& face : grid.internal_faces) {
+        int p = face.cell_p;
+        int q = face.cell_n;
+        double dist = (face.dir == FaceDir::Xminus || face.dir == FaceDir::Xplus) ? grid.dx :
+                      (face.dir == FaceDir::Yminus || face.dir == FaceDir::Yplus) ? grid.dy : grid.dz;
+        double cond = prob_.k * face.area / dist;
+        builder.add(p, p,  cond);
+        builder.add(p, q, -cond);
+        builder.add(q, q,  cond);
+        builder.add(q, p, -cond);
+    }
+
+    // Boundary faces: distance from cell center to boundary face is half_dist
+    for (const auto& bf : grid.boundary_faces) {
+        int p = bf.cell_p;
+        double half_dist = (bf.dir == FaceDir::Xminus || bf.dir == FaceDir::Xplus) ? 0.5 * grid.dx :
+                           (bf.dir == FaceDir::Yminus || bf.dir == FaceDir::Yplus) ? 0.5 * grid.dy : 0.5 * grid.dz;
+        double gb = prob_.k * bf.area / half_dist;
+        builder.add(p, p, gb);
+        double T_face = T_exact(bf.x, bf.y, bf.z);
+        b[p] += gb * T_face;
+    }
+
+    SparseCsr A = builder.finalise();
+    auto t_as_1 = Clock::now();
+    result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
+    result.n_nnz = A.nnz();
+
+    std::vector<double> T(n, 300.0);
+    SolverParams p = lparams;
+    if (p.rel_tol <= 0.0) p.rel_tol = 1e-12;
+    if (p.max_iter <= 0) p.max_iter = 5000;
+
+    auto t_sol_0 = Clock::now();
+    auto precond = make_ic0_precond(A);
+    auto sol_res = pcg_solve(A, b, T, precond, p, "PCG-IC0");
+    auto t_sol_1 = Clock::now();
+
+    result.t_solve_ms = std::chrono::duration<double, std::milli>(t_sol_1 - t_sol_0).count();
+    result.linear_solver = sol_res.method;
+    result.iterations = sol_res.iterations;
+    result.final_rel_res = sol_res.final_rel_res;
+    result.success = sol_res.converged;
+    result.T = T;
+
+    double t_min = 1e9, t_max = -1e9, t_sum = 0.0;
+    for (double val : T) {
+        t_min = std::min(t_min, val);
+        t_max = std::max(t_max, val);
+        t_sum += val;
+    }
+    result.T_min = t_min;
+    result.T_max = t_max;
+    result.T_avg_raw = t_sum / n;
+    result.T_avg = result.T_avg_raw;
+    result.peak_mem_bytes = peak_memory_bytes();
+    result.t_total_ms = result.t_assemble_ms + result.t_solve_ms;
     return result;
 }
 

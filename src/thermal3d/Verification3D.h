@@ -78,6 +78,9 @@ struct VerificationSuiteResult {
     double mms_e1_fem{0.0}, mms_e2_fem{0.0}, mms_e3_fem{0.0};
     double mms_e1_fdm{0.0}, mms_e2_fdm{0.0}, mms_e3_fdm{0.0};
     double mms_e1_fvm{0.0}, mms_e2_fvm{0.0}, mms_e3_fvm{0.0};
+    double mms_linf1_fem{0.0}, mms_linf2_fem{0.0}, mms_linf3_fem{0.0};
+    double mms_linf1_fdm{0.0}, mms_linf2_fdm{0.0}, mms_linf3_fdm{0.0};
+    double mms_linf1_fvm{0.0}, mms_linf2_fvm{0.0}, mms_linf3_fvm{0.0};
 
     // 3. 30 Fixed Probe Points
     std::vector<ProbePoint3D> probes;
@@ -126,6 +129,7 @@ public:
 
     // 3D Box Manufactured Solution test returning observed order
     bool run_mms_test(double& order_fem, double& order_fdm, double& order_fvm);
+    bool run_mms_test(VerificationSuiteResult& suite);
 
     // Sample temperature at an arbitrary point
     static double sample_fem(const FemMesh& mesh, const std::vector<double>& T_nodes, const Point3D& pt);

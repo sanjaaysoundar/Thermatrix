@@ -520,5 +520,196 @@ StructuredGrid3D generate_structured_grid(const HeatSinkGeometry& geom, MeshReso
     return grid;
 }
 
+FemMesh generate_box_fem_mesh(double Lx, double Ly, double Lz, int nx, int ny, int nz) {
+    FemMesh mesh;
+    double dx = Lx / nx;
+    double dy = Ly / ny;
+    double dz = Lz / nz;
+
+    // Nodes
+    int total_nodes = (nx + 1) * (ny + 1) * (nz + 1);
+    mesh.nodes.reserve(total_nodes);
+    auto node_idx = [&](int i, int j, int k) {
+        return (k * (ny + 1) + j) * (nx + 1) + i;
+    };
+
+    for (int k = 0; k <= nz; ++k) {
+        for (int j = 0; j <= ny; ++j) {
+            for (int i = 0; i <= nx; ++i) {
+                mesh.nodes.push_back({i * dx, j * dy, k * dz});
+            }
+        }
+    }
+
+    // Elements: 6 tets per hex cell
+    int total_hexes = nx * ny * nz;
+    mesh.elements.reserve(total_hexes * 6);
+
+    for (int k = 0; k < nz; ++k) {
+        for (int j = 0; j < ny; ++j) {
+            for (int i = 0; i < nx; ++i) {
+                int c000 = node_idx(i, j, k);
+                int c100 = node_idx(i + 1, j, k);
+                int c110 = node_idx(i + 1, j + 1, k);
+                int c010 = node_idx(i, j + 1, k);
+                int c001 = node_idx(i, j, k + 1);
+                int c101 = node_idx(i + 1, j, k + 1);
+                int c111 = node_idx(i + 1, j + 1, k + 1);
+                int c011 = node_idx(i, j + 1, k + 1);
+
+                std::array<std::array<int, 4>, 6> tet_indices = {{
+                    {c000, c100, c110, c111},
+                    {c000, c100, c101, c111},
+                    {c000, c001, c101, c111},
+                    {c000, c010, c110, c111},
+                    {c000, c010, c011, c111},
+                    {c000, c001, c011, c111}
+                }};
+
+                for (const auto& tv : tet_indices) {
+                    double v = tet_volume(mesh.nodes[tv[0]], mesh.nodes[tv[1]],
+                                          mesh.nodes[tv[2]], mesh.nodes[tv[3]]);
+                    if (v > 1e-18) {
+                        mesh.elements.push_back({tv, v});
+                    }
+                }
+            }
+        }
+    }
+
+    // Boundary faces: extract unique half-faces (appearing exactly once)
+    struct FKey {
+        int v0, v1, v2;
+        bool operator<(const FKey& o) const {
+            if (v0 != o.v0) return v0 < o.v0;
+            if (v1 != o.v1) return v1 < o.v1;
+            return v2 < o.v2;
+        }
+    };
+    struct FVal {
+        int count;
+        std::array<int, 3> orig_v;
+        int elem;
+    };
+    std::map<FKey, FVal> face_map;
+
+    for (size_t e = 0; e < mesh.elements.size(); ++e) {
+        const auto& ev = mesh.elements[e].v;
+        std::array<std::array<int, 3>, 4> lfaces = {{
+            {ev[1], ev[2], ev[3]},
+            {ev[0], ev[3], ev[2]},
+            {ev[0], ev[1], ev[3]},
+            {ev[0], ev[2], ev[1]}
+        }};
+        for (const auto& lf : lfaces) {
+            std::array<int, 3> s = lf;
+            std::sort(s.begin(), s.end());
+            FKey key{s[0], s[1], s[2]};
+            auto it = face_map.find(key);
+            if (it == face_map.end()) {
+                face_map[key] = {1, lf, static_cast<int>(e)};
+            } else {
+                it->second.count++;
+            }
+        }
+    }
+
+    for (const auto& kv : face_map) {
+        if (kv.second.count == 1) {
+            const auto& orig = kv.second.orig_v;
+            const auto& p0 = mesh.nodes[orig[0]];
+            const auto& p1 = mesh.nodes[orig[1]];
+            const auto& p2 = mesh.nodes[orig[2]];
+
+            double ax = p1.x - p0.x, ay = p1.y - p0.y, az = p1.z - p0.z;
+            double bx = p2.x - p0.x, by = p2.y - p0.y, bz = p2.z - p0.z;
+            double cx = ay * bz - az * by;
+            double cy = az * bx - ax * bz;
+            double cz = ax * by - ay * bx;
+            double norm = std::sqrt(cx * cx + cy * cy + cz * cz);
+            double area = 0.5 * norm;
+            std::array<double, 3> normal = {0, 0, 1};
+            if (norm > 1e-15) {
+                normal = {cx / norm, cy / norm, cz / norm};
+            }
+            mesh.boundary_faces.push_back({orig, normal, area, BcType::Robin});
+        }
+    }
+
+    return mesh;
+}
+
+StructuredGrid3D generate_box_structured_grid(double Lx, double Ly, double Lz, int nx, int ny, int nz) {
+    StructuredGrid3D grid;
+    grid.nx = nx;
+    grid.ny = ny;
+    grid.nz = nz;
+    grid.dx = Lx / nx;
+    grid.dy = Ly / ny;
+    grid.dz = Lz / nz;
+    grid.origin = {0.0, 0.0, 0.0};
+
+    int total_cells = nx * ny * nz;
+    grid.is_solid.assign(total_cells, true);
+    grid.cell_to_dof.resize(total_cells);
+    grid.dof_to_coord.resize(total_cells);
+
+    for (int k = 0; k < nz; ++k) {
+        for (int j = 0; j < ny; ++j) {
+            for (int i = 0; i < nx; ++i) {
+                int idx = (k * ny + j) * nx + i;
+                grid.cell_to_dof[idx] = idx;
+                grid.dof_to_coord[idx] = {i, j, k};
+            }
+        }
+    }
+
+    std::array<FaceDir, 6> dirs = {
+        FaceDir::Xminus, FaceDir::Xplus,
+        FaceDir::Yminus, FaceDir::Yplus,
+        FaceDir::Zminus, FaceDir::Zplus
+    };
+    std::array<int, 6> di = {-1, 1, 0, 0, 0, 0};
+    std::array<int, 6> dj = {0, 0, -1, 1, 0, 0};
+    std::array<int, 6> dk = {0, 0, 0, 0, -1, 1};
+    std::array<double, 6> areas = {
+        grid.dy * grid.dz, grid.dy * grid.dz,
+        grid.dx * grid.dz, grid.dx * grid.dz,
+        grid.dx * grid.dy, grid.dx * grid.dy
+    };
+
+    for (int dof_idx = 0; dof_idx < total_cells; ++dof_idx) {
+        const auto& c = grid.dof_to_coord[dof_idx];
+        Point3D cc = grid.cell_center(c.i, c.j, c.k);
+
+        for (int d = 0; d < 6; ++d) {
+            int ni = c.i + di[d];
+            int nj = c.j + dj[d];
+            int nk = c.k + dk[d];
+
+            double fx = cc.x + 0.5 * di[d] * grid.dx;
+            double fy = cc.y + 0.5 * dj[d] * grid.dy;
+            double fz = cc.z + 0.5 * dk[d] * grid.dz;
+
+            if (ni >= 0 && ni < nx && nj >= 0 && nj < ny && nk >= 0 && nk < nz) {
+                int n_idx = (nk * ny + nj) * nx + ni;
+                if (dof_idx < n_idx) {
+                    grid.internal_faces.push_back({
+                        dof_idx, n_idx, dirs[d], areas[d],
+                        BcType::Adiabatic, fx, fy, fz
+                    });
+                }
+            } else {
+                grid.boundary_faces.push_back({
+                    dof_idx, -1, dirs[d], areas[d],
+                    BcType::Robin, fx, fy, fz
+                });
+            }
+        }
+    }
+
+    return grid;
+}
+
 } // namespace t3d
 } // namespace thermatrix

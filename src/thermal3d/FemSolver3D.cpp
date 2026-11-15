@@ -212,7 +212,18 @@ SolverResult FemSolver3D::solve(const FemMesh& mesh,
     }
     result.T_min = t_min;
     result.T_max = t_max;
-    result.T_avg = t_sum / n;
+    result.T_avg_raw = t_sum / n;
+
+    // Volume-weighted average: integral(T dV) / total_volume
+    double vol_sum = 0.0;
+    double weighted_t_sum = 0.0;
+    for (const auto& tet : mesh.elements) {
+        double v = tet.volume;
+        double elem_T = 0.25 * (T[tet.v[0]] + T[tet.v[1]] + T[tet.v[2]] + T[tet.v[3]]);
+        weighted_t_sum += elem_T * v;
+        vol_sum += v;
+    }
+    result.T_avg = (vol_sum > 0.0) ? (weighted_t_sum / vol_sum) : result.T_avg_raw;
 
     // Average temperature on source patch
     double src_t_sum = 0.0;
@@ -241,6 +252,109 @@ SolverResult FemSolver3D::solve(const FemMesh& mesh,
     result.t_post_ms = std::chrono::duration<double, std::milli>(t_post_1 - t_post_0).count();
     result.t_total_ms = result.t_mesh_ms + result.t_assemble_ms + result.t_solve_ms + result.t_post_ms;
 
+    return result;
+}
+
+SolverResult FemSolver3D::solve_mms(
+    const FemMesh& mesh,
+    const std::function<double(double, double, double)>& T_exact,
+    const SolverParams& lparams) {
+    SolverResult result;
+    result.solver_name = "FEM";
+    result.case_label = "MMS";
+    result.n_dof = mesh.n_nodes();
+    result.n_elements = mesh.n_elements();
+
+    int n = mesh.n_nodes();
+    if (n == 0) {
+        result.success = false;
+        result.error_message = "Empty FEM mesh";
+        return result;
+    }
+
+    // Identify boundary nodes
+    std::vector<bool> is_bnd(n, false);
+    for (const auto& bf : mesh.boundary_faces) {
+        for (int v : bf.v) is_bnd[v] = true;
+    }
+
+    // Assembly with Dirichlet elimination
+    auto t_as_0 = Clock::now();
+    SparseBuilder builder(n, n);
+    std::vector<double> b(n, 0.0);
+
+    for (const auto& elem : mesh.elements) {
+        const auto& ev = elem.v;
+        std::array<Vec3, 4> grads;
+        compute_tet_gradients(mesh.nodes[ev[0]], mesh.nodes[ev[1]],
+                              mesh.nodes[ev[2]], mesh.nodes[ev[3]],
+                              elem.volume, grads);
+
+        double coeff = prob_.k * elem.volume;
+        for (int i = 0; i < 4; ++i) {
+            int ni = ev[i];
+            for (int j = 0; j < 4; ++j) {
+                int nj = ev[j];
+                double kval = coeff * grads[i].dot(grads[j]);
+                if (std::abs(kval) < 1e-18) continue;
+
+                if (is_bnd[ni]) {
+                    // Row ni will be set to identity below
+                } else if (is_bnd[nj]) {
+                    double T_b = T_exact(mesh.nodes[nj].x, mesh.nodes[nj].y, mesh.nodes[nj].z);
+                    b[ni] -= kval * T_b;
+                } else {
+                    builder.add(ni, nj, kval);
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < n; ++i) {
+        if (is_bnd[i]) {
+            builder.add(i, i, 1.0);
+            b[i] = T_exact(mesh.nodes[i].x, mesh.nodes[i].y, mesh.nodes[i].z);
+        }
+    }
+
+    SparseCsr A = builder.finalise();
+    auto t_as_1 = Clock::now();
+    result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
+    result.n_nnz = A.nnz();
+
+    std::vector<double> T(n, 300.0);
+    for (int i = 0; i < n; ++i) {
+        if (is_bnd[i]) T[i] = b[i];
+    }
+
+    SolverParams p = lparams;
+    if (p.rel_tol <= 0.0) p.rel_tol = 1e-12;
+    if (p.max_iter <= 0) p.max_iter = 5000;
+
+    auto t_sol_0 = Clock::now();
+    auto precond = make_ic0_precond(A);
+    auto sol_res = pcg_solve(A, b, T, precond, p, "PCG-IC0");
+    auto t_sol_1 = Clock::now();
+
+    result.t_solve_ms = std::chrono::duration<double, std::milli>(t_sol_1 - t_sol_0).count();
+    result.linear_solver = sol_res.method;
+    result.iterations = sol_res.iterations;
+    result.final_rel_res = sol_res.final_rel_res;
+    result.success = sol_res.converged;
+    result.T = T;
+
+    double t_min = 1e9, t_max = -1e9, t_sum = 0.0;
+    for (double val : T) {
+        t_min = std::min(t_min, val);
+        t_max = std::max(t_max, val);
+        t_sum += val;
+    }
+    result.T_min = t_min;
+    result.T_max = t_max;
+    result.T_avg_raw = t_sum / n;
+    result.T_avg = result.T_avg_raw;
+    result.peak_mem_bytes = peak_memory_bytes();
+    result.t_total_ms = result.t_assemble_ms + result.t_solve_ms;
     return result;
 }
 

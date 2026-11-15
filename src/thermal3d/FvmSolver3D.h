@@ -7,6 +7,7 @@
 #include "Mesh3D.h"
 #include "SolverResult.h"
 #include "LinearSolvers.h"
+#include <functional>
 
 namespace thermatrix {
 namespace t3d {
@@ -32,6 +33,11 @@ public:
     SolverResult solve(const FemMesh& mesh,
                        ConvCase conv_case = ConvCase::A,
                        const SolverParams& lparams = SolverParams{});
+
+    // Solve manufactured solution problem on mesh with boundary matching T_exact
+    SolverResult solve_mms(const FemMesh& mesh,
+                           const std::function<double(double, double, double)>& T_exact,
+                           const SolverParams& lparams = SolverParams{});
 
     // Non-orthogonal correction parameters
     void set_correction_params(int n_outer, double alpha) noexcept {

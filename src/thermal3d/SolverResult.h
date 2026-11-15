@@ -47,7 +47,8 @@ struct SolverResult {
     // --- Temperature statistics (°C) ----------------------------------------
     double T_min  { 0.0 };
     double T_max  { 0.0 };
-    double T_avg  { 0.0 };
+    double T_avg  { 0.0 };     ///< Volume-weighted average T (°C)
+    double T_avg_raw { 0.0 }; ///< Unweighted arithmetic average T (°C)
     double T_src  { 0.0 };     ///< Average T on the source patch (heat-flux boundary)
 
     // --- Energy balance -----------------------------------------------------
@@ -105,6 +106,7 @@ struct BenchmarkRunStats {
     double      T_min      { 0.0 };
     double      T_max      { 0.0 };
     double      T_avg      { 0.0 };
+    double      T_avg_raw  { 0.0 };
     double      T_src      { 0.0 };
 
     double      Q_in       { 0.0 };

@@ -361,7 +361,17 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
     }
     result.T_min = t_min;
     result.T_max = t_max;
-    result.T_avg = t_sum / n_cells;
+    result.T_avg_raw = t_sum / n_cells;
+
+    // Volume-weighted average: integral(T dV) / total_volume
+    double vol_sum = 0.0;
+    double weighted_t_sum = 0.0;
+    for (int e = 0; e < n_cells; ++e) {
+        double v = mesh.elements[e].volume;
+        weighted_t_sum += T[e] * v;
+        vol_sum += v;
+    }
+    result.T_avg = (vol_sum > 0.0) ? (weighted_t_sum / vol_sum) : result.T_avg_raw;
 
     double src_t_sum = 0.0;
     double src_area_sum = 0.0;
@@ -387,6 +397,208 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
     result.t_post_ms = std::chrono::duration<double, std::milli>(t_post_1 - t_post_0).count();
     result.t_total_ms = result.t_mesh_ms + result.t_assemble_ms + result.t_solve_ms + result.t_post_ms;
 
+    return result;
+}
+
+SolverResult FvmSolver3D::solve_mms(
+    const FemMesh& mesh,
+    const std::function<double(double, double, double)>& T_exact,
+    const SolverParams& lparams) {
+    SolverResult result;
+    result.solver_name = "FVM";
+    result.case_label = "MMS";
+    int n_cells = mesh.n_elements();
+    result.n_dof = n_cells;
+    result.n_elements = n_cells;
+
+    if (n_cells == 0) {
+        result.success = false;
+        result.error_message = "Empty FVM mesh";
+        return result;
+    }
+
+    auto t_as_0 = Clock::now();
+
+    // 1. Cell centroids
+    std::vector<Vec3> cell_centers(n_cells);
+    for (int e = 0; e < n_cells; ++e) {
+        const auto& ev = mesh.elements[e].v;
+        Vec3 c{0, 0, 0};
+        for (int i = 0; i < 4; ++i) {
+            c.x += mesh.nodes[ev[i]].x;
+            c.y += mesh.nodes[ev[i]].y;
+            c.z += mesh.nodes[ev[i]].z;
+        }
+        cell_centers[e] = c * 0.25;
+    }
+
+    // 2. Build face connectivity
+    std::map<FaceKey, std::vector<HalfFaceInfo>> face_map;
+    for (int e = 0; e < n_cells; ++e) {
+        const auto& ev = mesh.elements[e].v;
+        std::array<std::array<int, 3>, 4> local_faces = {{
+            {ev[1], ev[2], ev[3]},
+            {ev[0], ev[3], ev[2]},
+            {ev[0], ev[1], ev[3]},
+            {ev[0], ev[2], ev[1]}
+        }};
+        for (const auto& lf : local_faces) {
+            std::array<int, 3> sorted = lf;
+            std::sort(sorted.begin(), sorted.end());
+            face_map[FaceKey{sorted[0], sorted[1], sorted[2]}].push_back({e, lf});
+        }
+    }
+
+    struct InternalFaceMMS {
+        int cell_P;
+        int cell_N;
+        double a_PN;
+        Vec3 k_vec;
+        double area;
+        double cos_theta;
+    };
+    struct BoundaryFaceMMS {
+        int cell_P;
+        double area;
+        double g_b;
+        Vec3 center;
+        Vec3 normal;
+    };
+
+    std::vector<InternalFaceMMS> internal_faces;
+    std::vector<BoundaryFaceMMS> boundary_faces;
+
+    for (const auto& kv : face_map) {
+        const auto& hf_list = kv.second;
+        const auto& tri_v = hf_list[0].orig_v;
+        const auto& p0 = mesh.nodes[tri_v[0]];
+        const auto& p1 = mesh.nodes[tri_v[1]];
+        const auto& p2 = mesh.nodes[tri_v[2]];
+
+        Vec3 v0{p0.x, p0.y, p0.z};
+        Vec3 v1{p1.x, p1.y, p1.z};
+        Vec3 v2{p2.x, p2.y, p2.z};
+        Vec3 f_center = (v0 + v1 + v2) * (1.0 / 3.0);
+        Vec3 cross = (v1 - v0).cross(v2 - v0);
+        double area = 0.5 * cross.norm();
+        Vec3 n_f = cross.normalized();
+
+        if (hf_list.size() == 2) {
+            int cP = hf_list[0].elem;
+            int cN = hf_list[1].elem;
+            if (cP > cN) std::swap(cP, cN);
+            Vec3 d_PN = cell_centers[cN] - cell_centers[cP];
+            double dist = d_PN.norm();
+            Vec3 e_PN = (dist > 1e-15) ? (d_PN * (1.0 / dist)) : Vec3{0, 0, 1};
+            if (n_f.dot(e_PN) < 0.0) n_f = n_f * -1.0;
+
+            double cos_theta = std::max(0.01, std::min(1.0, e_PN.dot(n_f)));
+            double a_PN = prob_.k * (area * cos_theta) / std::max(dist, 1e-15);
+            Vec3 k_vec = (n_f - e_PN * cos_theta) * area;
+
+            internal_faces.push_back({cP, cN, a_PN, k_vec, area, cos_theta});
+        } else if (hf_list.size() == 1) {
+            int cP = hf_list[0].elem;
+            Vec3 out_dir = f_center - cell_centers[cP];
+            if (n_f.dot(out_dir) < 0.0) n_f = n_f * -1.0;
+            double dist_P = std::max(1e-6, std::abs(out_dir.dot(n_f)));
+            double g_b = prob_.k * area / dist_P;
+            Vec3 proj = cell_centers[cP] + n_f * dist_P;
+            boundary_faces.push_back({cP, area, g_b, proj, n_f});
+        }
+    }
+
+    SparseBuilder builder(n_cells, n_cells);
+    std::vector<double> b(n_cells, 0.0);
+
+    for (const auto& iface : internal_faces) {
+        builder.add(iface.cell_P, iface.cell_P,  iface.a_PN);
+        builder.add(iface.cell_P, iface.cell_N, -iface.a_PN);
+        builder.add(iface.cell_N, iface.cell_N,  iface.a_PN);
+        builder.add(iface.cell_N, iface.cell_P, -iface.a_PN);
+    }
+
+    for (const auto& bface : boundary_faces) {
+        builder.add(bface.cell_P, bface.cell_P, bface.g_b);
+        double T_face = T_exact(bface.center.x, bface.center.y, bface.center.z);
+        b[bface.cell_P] += bface.g_b * T_face;
+    }
+
+    SparseCsr A = builder.finalise();
+    auto t_as_1 = Clock::now();
+    result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
+    result.n_nnz = A.nnz();
+
+    std::vector<double> T(n_cells, 300.0);
+    SolverParams p = lparams;
+    if (p.rel_tol <= 0.0) p.rel_tol = 1e-12;
+    if (p.max_iter <= 0) p.max_iter = 5000;
+
+    auto t_sol_0 = Clock::now();
+    auto precond = make_ic0_precond(A);
+    int total_iters = 0;
+    double final_res = 0.0;
+    bool converged = false;
+
+    int outer_loops = std::max(1, n_outer_);
+    for (int corr = 0; corr < outer_loops; ++corr) {
+        std::vector<double> b_eff = b;
+        if (corr > 0 && n_outer_ > 1 && alpha_no_ > 0.0) {
+            std::vector<Vec3> grad_T(n_cells, Vec3{0, 0, 0});
+            for (const auto& iface : internal_faces) {
+                double T_face = 0.5 * (T[iface.cell_P] + T[iface.cell_N]);
+                Vec3 d_PN = cell_centers[iface.cell_N] - cell_centers[iface.cell_P];
+                double dist = d_PN.norm();
+                Vec3 e_PN = (dist > 1e-15) ? (d_PN * (1.0 / dist)) : Vec3{0, 0, 1};
+                Vec3 S_vec = e_PN * (iface.area * iface.cos_theta) + iface.k_vec;
+                grad_T[iface.cell_P] = grad_T[iface.cell_P] + S_vec * T_face;
+                grad_T[iface.cell_N] = grad_T[iface.cell_N] - S_vec * T_face;
+            }
+            for (const auto& bface : boundary_faces) {
+                double T_face = T_exact(bface.center.x, bface.center.y, bface.center.z);
+                Vec3 S_b = bface.normal * bface.area;
+                grad_T[bface.cell_P] = grad_T[bface.cell_P] + S_b * T_face;
+            }
+            for (int e = 0; e < n_cells; ++e) {
+                double v = mesh.elements[e].volume;
+                if (v > 1e-18) grad_T[e] = grad_T[e] * (1.0 / v);
+            }
+            double alpha_no = alpha_no_;
+            for (const auto& iface : internal_faces) {
+                Vec3 grad_f = (grad_T[iface.cell_P] + grad_T[iface.cell_N]) * 0.5;
+                double F_no = -prob_.k * iface.k_vec.dot(grad_f);
+                double F_lim = 0.3 * iface.a_PN * std::abs(T[iface.cell_P] - T[iface.cell_N]);
+                F_no = std::max(-F_lim, std::min(F_lim, F_no));
+                b_eff[iface.cell_P] -= alpha_no * F_no;
+                b_eff[iface.cell_N] += alpha_no * F_no;
+            }
+        }
+        auto sol_res = pcg_solve(A, b_eff, T, precond, p, "PCG-IC0");
+        total_iters += sol_res.iterations;
+        final_res = sol_res.final_rel_res;
+        converged = sol_res.converged;
+    }
+
+    auto t_sol_1 = Clock::now();
+    result.t_solve_ms = std::chrono::duration<double, std::milli>(t_sol_1 - t_sol_0).count();
+    result.linear_solver = "PCG-IC0";
+    result.iterations = total_iters;
+    result.final_rel_res = final_res;
+    result.success = converged;
+    result.T = T;
+
+    double t_min = 1e9, t_max = -1e9, t_sum = 0.0;
+    for (double val : T) {
+        t_min = std::min(t_min, val);
+        t_max = std::max(t_max, val);
+        t_sum += val;
+    }
+    result.T_min = t_min;
+    result.T_max = t_max;
+    result.T_avg_raw = t_sum / n_cells;
+    result.T_avg = result.T_avg_raw;
+    result.peak_mem_bytes = peak_memory_bytes();
+    result.t_total_ms = result.t_assemble_ms + result.t_solve_ms;
     return result;
 }
 

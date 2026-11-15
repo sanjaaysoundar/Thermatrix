@@ -111,5 +111,9 @@ FemMesh generate_fem_mesh(const HeatSinkGeometry& geom, MeshResolution res);
 
 StructuredGrid3D generate_structured_grid(const HeatSinkGeometry& geom, MeshResolution res);
 
+FemMesh generate_box_fem_mesh(double Lx, double Ly, double Lz, int nx, int ny, int nz);
+
+StructuredGrid3D generate_box_structured_grid(double Lx, double Ly, double Lz, int nx, int ny, int nz);
+
 } // namespace t3d
 } // namespace thermatrix

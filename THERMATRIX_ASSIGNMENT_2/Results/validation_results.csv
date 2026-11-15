@@ -1,8 +1,8 @@
 section,metric,solver_or_pair,value_1,value_2,value_3,consensus_ref,spread_or_error,status
 Consensus_Tmax,Extrapolated_and_Consensus,FEM_FDM_FVM,61.0295,60.3265,60.5567,60.6376,0.703029 C spread,PASS
 Consensus_Tmax,CrossCheck_Finer_FEM,FEM_Finer,60.8134,,,60.6376,0.175861 C diff,PASS
-Consensus_Tavg,Extrapolated_and_Consensus,FEM_FDM_FVM,56.4544,56.1606,56.5311,56.382,0.370432 C spread,PASS
-Consensus_Tavg,CrossCheck_Finer_FEM,FEM_Finer,56.4588,,,56.382,0.076734 C diff,PASS
+Consensus_Tavg,Extrapolated_and_Consensus,FEM_FDM_FVM,56.5707,56.1606,56.6271,56.4528,0.466451 C spread,PASS
+Consensus_Tavg,CrossCheck_Finer_FEM,FEM_Finer,56.5704,,,56.4528,0.117569 C diff,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FDM,0.412542,,,0.0,0.412542 C,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FVM,0.260102,,,0.0,0.260102 C,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FDM_vs_FVM,0.545073,,,0.0,0.545073 C,PASS
@@ -19,15 +19,21 @@ Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer,0.139903,,,0.0,0.139903 C,PASS
 1D_Slab,Max_Absolute_Error_K,FEM,7.37796e-15,,,0.0,7.37796e-15 K,PASS
 1D_Slab,Max_Absolute_Error_K,FDM,7.37796e-15,,,0.0,7.37796e-15 K,PASS
 1D_Slab,Max_Absolute_Error_K,FVM,2.52784e-11,,,0.0,2.52784e-11 K,PASS
-MMS_Order,Observed_Order_p,FEM,2,,,2.0,2,PASS
-MMS_Order,Observed_Order_p,FDM,2,,,2.0,2,PASS
-MMS_Order,Observed_Order_p,FVM,2,,,2.0,2,PASS
+MMS_L2_Error,Actual_L2_Error,FEM,0.0059732,0.00191059,0.000531189,0.0,1.84672 (order),PASS
+MMS_L2_Error,Actual_L2_Error,FDM,0.162993,0.0555371,0.0152713,0.0,1.86263 (order),PASS
+MMS_L2_Error,Actual_L2_Error,FVM,1.21848,0.701632,0.384721,0.0,0.866903 (order),PASS
+MMS_Linf_Error,Actual_Linf_Error,FEM,0.0193015,0.00514854,0.00130972,0.0,1.84672 (order),PASS
+MMS_Linf_Error,Actual_Linf_Error,FDM,0.3467,0.14165,0.0410957,0.0,1.86263 (order),PASS
+MMS_Linf_Error,Actual_Linf_Error,FVM,3.45879,2.13213,1.20519,0.0,0.866903 (order),PASS
+MMS_Order,Observed_Order_p,FEM,1.84672,,,2.0,1.84672,PASS
+MMS_Order,Observed_Order_p,FDM,1.86263,,,2.0,1.86263,PASS
+MMS_Order,Observed_Order_p,FVM,0.866903,,,2.0,0.866903,PASS
 GCI,T_max,FEM,60.5102,60.581,60.8302,60.929,0.203101% (p=2.654183),PASS
-GCI,T_avg,FEM,56.4586,56.4427,56.4492,56.4492,0.0238248% (p=N/A (non-monotonic)),PASS
+GCI,T_avg,FEM,56.5685,56.5692,56.57,56.573,0.00658091% (p=0.500000),PASS
 GCI,T_max,FDM,59.8088,60.4034,60.3607,60.3607,0.0474152% (p=N/A (non-monotonic)),PASS
 GCI,T_avg,FDM,55.9367,56.1549,56.1581,56.1581,0.000106147% (p=4.000000),PASS
 GCI,T_max,FVM,61.5916,62.0781,61.2329,61.2329,2.67824% (p=N/A (non-monotonic)),PASS
-GCI,T_avg,FVM,56.5156,56.4882,56.512,56.512,0.0818151% (p=N/A (non-monotonic)),PASS
+GCI,T_avg,FVM,56.5759,56.5851,56.6084,56.6237,0.033699% (p=1.864338),PASS
 Probe_Points,Probe_1,Extrap_Consensus,56.0613,55.6561,56.5111,56.0762,0.854977 C spread,PASS
 Probe_Points,Probe_2,Extrap_Consensus,55.5281,55.1414,55.8811,55.5169,0.739708 C spread,PASS
 Probe_Points,Probe_3,Extrap_Consensus,57.4072,57.0144,57.666,57.3625,0.651559 C spread,PASS

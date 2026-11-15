@@ -6,6 +6,7 @@
 #include "Mesh3D.h"
 #include "SolverResult.h"
 #include "LinearSolvers.h"
+#include <functional>
 
 namespace thermatrix {
 namespace t3d {
@@ -23,6 +24,11 @@ public:
     SolverResult solve(const StructuredGrid3D& grid,
                        ConvCase conv_case = ConvCase::A,
                        const SolverParams& lparams = SolverParams{});
+
+    // Solve manufactured solution problem on grid with Dirichlet boundary matching T_exact
+    SolverResult solve_mms(const StructuredGrid3D& grid,
+                           const std::function<double(double, double, double)>& T_exact,
+                           const SolverParams& lparams = SolverParams{});
 
 private:
     ThermalProblem prob_;

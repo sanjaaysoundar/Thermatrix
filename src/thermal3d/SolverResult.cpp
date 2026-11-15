@@ -54,7 +54,7 @@ std::string SolverResult::csv_header() {
     return "solver,case,n_dof,n_nnz,n_elements,linear_solver,"
            "iterations,final_rel_res,"
            "t_mesh_ms,t_assemble_ms,t_solve_ms,t_total_ms,"
-           "T_min_C,T_max_C,T_avg_C,T_src_C,"
+           "T_min_C,T_max_C,T_avg_C,T_avg_raw_C,T_src_C,"
            "Q_in_W,Q_conv_W,Q_balance_rel,"
            "peak_mem_bytes";
 }
@@ -92,6 +92,7 @@ std::string SolverResult::to_csv_row() const {
        << fixd(T_min, 4)    << ","
        << fixd(T_max, 4)    << ","
        << fixd(T_avg, 4)    << ","
+       << fixd(T_avg_raw, 4) << ","
        << fixd(T_src, 4)    << ","
        << fixd(Q_in, 6)     << ","
        << fixd(Q_conv, 6)   << ","
@@ -113,7 +114,7 @@ std::string BenchmarkRunStats::csv_header() {
            "t_post_min_ms,t_post_med_ms,t_post_max_ms,"
            "t_total_min_ms,t_total_med_ms,t_total_max_ms,"
            "t_mesh_ms,t_assemble_ms,t_solve_ms,t_total_ms,"
-           "T_min_C,T_max_C,T_avg_C,T_src_C,"
+           "T_min_C,T_max_C,T_avg_C,T_avg_raw_C,T_src_C,"
            "Q_in_W,Q_conv_W,Q_balance_rel,"
            "peak_mem_bytes,peak_mem_mb";
 }
