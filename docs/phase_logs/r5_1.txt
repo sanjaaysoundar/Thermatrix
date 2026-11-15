@@ -1,0 +1,73 @@
+================================================================================
+ROUND 5 CORRECTION 1: NUMERICAL AUDIT AGAINST CSVS, STL, MESHES, AND LOGS
+================================================================================
+Timestamp: 2026-11-15T16:49:35+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. Verification of 33 Benchmark Rows in results/complexity_study.csv:
+---------------------------------------------------------------------
+- Total rows confirmed: 33 (11 FEM, 11 FDM, 11 FVM)
+- Levels confirmed:
+  * Cube_Coarse, Cube_Medium, Cube_Fine (Cases A & B)
+  * 9Fins_Coarse, 9Fins_Medium, 9Fins_Fine (Cases A & B)
+  * 3Fins_Medium, 5Fins_Medium (Case A fin sweeps)
+
+Summary of Data Ranges across all 33 rows:
+- FEM (11 runs):
+  * DOF range: 362 to 11,799
+  * Iterations: 26 to 174
+  * Final relative residual: 4.86e-11 to 9.82e-11
+  * Energy balance relative error: 1.99e-14 to 1.07e-12
+  * T_avg (volume-weighted): 37.73 °C to 98.67 °C
+  * T_avg (raw unweighted): 37.60 °C to 98.36 °C
+  * Peak memory: 5.75 MB to 24.46 MB
+- FDM (11 runs):
+  * DOF range: 20,700 to 1,409,400
+  * Iterations: 151 to 684
+  * Final relative residual: 8.42e-11 to 9.85e-11
+  * Energy balance relative error: 4.74e-14 to 7.56e-11 (Maximum observed: 7.5602e-11)
+  * T_avg (volume-weighted): 37.45 °C to 97.92 °C
+  * T_avg (raw unweighted): 37.45 °C to 97.92 °C
+  * Peak memory: 17.85 MB to 912.75 MB
+- FVM (11 runs):
+  * DOF range: 1,264 to 36,671
+  * Iterations: 190 to 1,288
+  * Final relative residual: 7.81e-11 to 9.61e-11
+  * Energy balance relative error: 3.48e-14 to 3.84e-13
+  * T_avg (volume-weighted): 37.74 °C to 98.71 °C
+  * T_avg (raw unweighted): 37.65 °C to 98.42 °C
+  * Peak memory: 6.35 MB to 35.39 MB
+
+2. Discrepancies Identified between Underlying Data and Previous Report Claims:
+------------------------------------------------------------------------------
+- Surface Area: Previous report used total STL area (35,451.46 mm^2) for convective heat transfer discussions. Convective Robin area must exclude the 100 mm^2 source patch and 3,500 mm^2 adiabatic underside, giving true convective area = 31,851.46 mm^2 (0.0318515 m^2). Ratio vs cube (18,000 mm^2) is 1.7695x, not 1.64x or 1.97x.
+- Average Temperature: Report text previously cited unweighted raw averages (FEM 56.45 °C, FVM 56.51 °C) in Section 11 instead of volume-weighted averages (FEM 56.5700 °C, FDM 56.1581 °C, FVM 56.6084 °C).
+- Energy Balance: Max energy conservation error is 7.5602e-11 (FDM Cube Fine Case A), not < 1e-13 across all solvers.
+- FVM MMS Convergence: True measured order is p = 0.8669 on skewed tets, not 1.72 or second-order.
+- Consensus Tmax: No method converges monotonically; consensus is unavailable and must be reported as N/A rather than substituting the Finer FEM value.
+- Consensus Tavg: Only FDM converges monotonically; must be labeled as Single-Method Extrapolation (FDM), not cross-solver consensus.
+- Probe RMSE: Probes 9-12 differ by 0.47 °C to 0.68 °C between FEM and FVM (not within 0.2 °C).
+
+3. Raw Full Test Suite Output:
+------------------------------
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.04 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.04 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.01 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.01 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.01 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.01 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.46 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   22.28 sec
+
+100% tests passed out of 8
+Total Test time (real) = 23.88 sec
