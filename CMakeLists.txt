@@ -86,6 +86,7 @@ set(T3D_SOURCES
     src/thermal3d/FdmSolver3D.cpp
     src/thermal3d/FvmSolver3D.cpp
     src/thermal3d/Benchmark3D.cpp
+    src/thermal3d/Verification3D.cpp
 )
 
 add_library(thermatrix_t3d STATIC ${T3D_SOURCES})
@@ -155,6 +156,11 @@ add_executable(test_t3d_solvers tests/test_t3d_solvers.cpp)
 target_include_directories(test_t3d_solvers PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(test_t3d_solvers PRIVATE thermatrix_t3d)
 add_test(NAME test_t3d_solvers COMMAND test_t3d_solvers)
+
+add_executable(test_t3d_verification tests/test_t3d_verification.cpp)
+target_include_directories(test_t3d_verification PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_t3d_verification PRIVATE thermatrix_t3d)
+add_test(NAME test_t3d_verification COMMAND test_t3d_verification)
 
 add_executable(run_t3d_benchmark tests/run_t3d_benchmark.cpp)
 target_include_directories(run_t3d_benchmark PRIVATE ${CMAKE_SOURCE_DIR})
