@@ -1,0 +1,79 @@
+================================================================================
+ROUND 5 CORRECTION 6: FVM ANALYSIS, MATRIX SYMMETRY, & NON-ORTHOGONALITY AUDIT
+================================================================================
+Timestamp: 2026-11-15T17:29:45+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. Matrix Symmetry & Positive-Definiteness Handling:
+----------------------------------------------------
+Preconditioned Conjugate Gradient (PCG) requires a symmetric positive-definite (SPD) matrix.
+  - Symmetry: The discrete FVM face diffusion conductances satisfy:
+        A_PN = -k * A_f / d_PN = A_NP
+    yielding exact matrix symmetry: ||A - A^T||_F / ||A||_F = 0.00 across all grid resolutions.
+  - Positive Definiteness: Positive diagonal entries alone (A_PP > 0) DO NOT mathematically
+    guarantee positive definiteness. Instead, positive definiteness is strictly established via
+    the Gershgorin circle theorem combined with Robin boundary physics:
+      * Interior rows are weakly diagonally dominant: sum_{N in nb(P)} |A_PN| = A_PP.
+      * Robin convective boundary faces add strictly positive conductance:
+            A_PP = sum_{N} |A_PN| + sum_{b} h * A_b
+        where h * A_b > 0.
+      * Because the unstructured tetrahedral mesh is a connected graph (irreducible) and
+        contains strictly diagonally dominant boundary rows with positive diagonals, A is
+        irreducibly diagonally dominant.
+      * By the Taussky theorem, all eigenvalues lambda_i > 0, rigorously guaranteeing that A
+        is strictly positive definite and PCG-IC(0) is unconditionally breakdown-free without
+        any diagonal clamping or ad-hoc regularisation.
+
+2. Reconciled Non-Orthogonality Metrics:
+----------------------------------------
+Actual non-orthogonality angle statistics from solver logs across grid resolutions:
+  - Coarse Mesh: Max Non-Orthogonality = 63.21°, Mean Non-Orthogonality = 27.16°
+  - Medium Mesh: Max Non-Orthogonality = 58.46°, Mean Non-Orthogonality = 23.02°
+  - Fine Mesh:   Max Non-Orthogonality = 58.36°, Mean Non-Orthogonality = 16.82°
+Reconciled in Table 10.1 and Section 10 prose.
+
+3. Near-Patch Point Temperatures & Flux Deposition:
+---------------------------------------------------
+Comparison of FEM and FVM temperatures at identical physical coordinates near the source patch:
+  - Patch Center (+1 mm z) (30, 35, 1) mm: FEM = 57.93 °C, FDM = 57.57 °C, FVM = 58.21 °C (Δ = +0.29 °C)
+  - Probe 9 (under patch)  (20, 35, 1) mm: FEM = 60.37 °C, FDM = 59.95 °C, FVM = 60.98 °C (Δ = +0.61 °C)
+  - Probe 10 (above P9)    (20, 35, 3) mm: FEM = 59.68 °C, FDM = 59.30 °C, FVM = 60.15 °C (Δ = +0.47 °C)
+  - Probe 11 (perimeter)   (16, 32, 2) mm: FEM = 59.25 °C, FDM = 58.92 °C, FVM = 59.84 °C (Δ = +0.60 °C)
+  - Probe 12 (patch edge)  (24, 38, 2) mm: FEM = 59.19 °C, FDM = 58.89 °C, FVM = 59.87 °C (Δ = +0.68 °C)
+* Correction: Probes 9–12 differ by 0.47 °C to 0.68 °C between FEM and FVM. The claim that they
+  agree within 0.2 °C has been removed.
+* Physical cause: FEM distributes Neumann boundary flux variationally across element nodes (q*A/3),
+  diffusing heat across all adjacent tetrahedra. FVM deposits the entire boundary face flux
+  directly into the single adjacent control volume cell (b_P += q*A).
+* Element metrics: Patch zone tetrahedral volumes vary from 5.23e-10 m^3 to 3.03e-9 m^3 (5.80x ratio)
+  due to boundary mesh sizing gradation. Mean element radius ratio remains healthy at 0.83; these
+  elements are graded isotropic tetrahedra, not degenerate slivers.
+
+4. Full Test Suite Execution Log:
+---------------------------------
+Command:
+cmd /c "set PATH=C:\msys64\mingw64\bin;%PATH% && ctest --test-dir build --output-on-failure"
+
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.03 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.04 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.03 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.02 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.04 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.08 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.50 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   25.82 sec
+
+100% tests passed out of 8
+
+Total Test time (real) =  27.59 sec
+================================================================================

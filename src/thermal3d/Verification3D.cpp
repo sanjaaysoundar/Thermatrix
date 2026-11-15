@@ -948,14 +948,14 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
               << "         basis functions; Neumann heat flux is integrated as integral(q * N_i dA) = q*A/3 per node,\n"
               << "         which naturally distributes flux across all elements sharing those nodes.\n"
               << "      2. FVM integrates heat flux per face and deposits the entire load directly into the single\n"
-              << "         adjacent cell: b[P] += q * A. For small or elongated tets (slivers produced by the\n"
-              << "         6-tet-per-cube decomposition), this creates a concentrated volumetric heat rate (q*A/V_P).\n"
+              << "         adjacent cell: b[P] += q * A. For graded tets near the patch boundary (volume ratio 5.80x due\n"
+              << "         to boundary refinement), this creates a concentrated local volumetric source rate (q*A/V_P).\n"
+              << "         Note that volume variation indicates graded mesh sizing rather than degenerate slivers (mean radius ratio ~0.83).\n"
               << "      3. Non-orthogonal deferred correction adds secondary flux k_vec . grad(T) across skewed faces.\n"
               << "         Near the source patch boundary where the temperature gradient is steep, this correction\n"
               << "         leads to a local temperature rise of ~0.3-0.5 C.\n"
-              << "      4. Interior probe points (e.g. Probes 9-12) agree closely across all three solvers\n"
-              << "         (within 0.2 C), confirming that the slight Tmax difference is localized to the single cell\n"
-              << "         at the boundary flux discontinuity rather than an overall solution discrepancy.\n"
+              << "      4. Near the source patch, Probes 9-12 exhibit differences of 0.47 C to 0.68 C between FEM and FVM\n"
+              << "         (P9: +0.61 C, P10: +0.47 C, P11: +0.60 C, P12: +0.68 C), matching localized patch flux concentration.\n"
               << "  ==================================================\n\n";
 
     SolverResult fem_finer;

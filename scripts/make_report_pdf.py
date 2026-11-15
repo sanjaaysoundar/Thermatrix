@@ -641,11 +641,22 @@ fvm_audit_tbl = [
 story += [
     make_table(fvm_audit_tbl[0], fvm_audit_tbl[1:], col_widths=[2.0*cm, 1.8*cm, 3.2*cm, 2.2*cm, 2.2*cm, 2.5*cm, 2.5*cm, 2.1*cm]),
     SP(0.1),
-    P("<b>Physical Cause of FVM Tmax exceeding FEM Tmax:</b> At the Fine level, FVM Tmax is 61.23 °C vs FEM Tmax of 60.83 °C (Δ = +0.40 °C). "
-      "Investigation reveals that FEM distributes surface Neumann flux variationally across 3 nodes (q·A/3), diffusing heat smoothly into adjacent tets. "
-      "FVM deposits the entire boundary face flux directly into the single adjacent tet cell (b_P += q·A). In the 6-tet decomposition near the patch, "
-      "tet volumes vary by a factor of 5.8× (5.23 × 10⁻¹⁰ to 3.03 × 10⁻⁹ m³), causing localized cell-centered volumetric heating concentration. "
-      "Away from the boundary flux discontinuity, interior probe points (Probes 9–12) agree within 0.2 °C across all solvers.", BODY),
+    P("<b>Rigorous PCG Positive-Definiteness Guarantee:</b> Preconditioned Conjugate Gradient requires a symmetric positive-definite (SPD) system matrix A. "
+      "The FVM orthogonal diffusion operator produces exact symmetry A_PN = −k A_f / d_PN = A_NP (||A − A^T|| / ||A|| = 0.00). "
+      "Crucially, positive diagonal entries alone (A_PP > 0) do not mathematically establish positive definiteness. "
+      "Here, positive definiteness is strictly guaranteed by the Gershgorin circle theorem: interior rows satisfy sum_N |A_PN| = A_PP, "
+      "while convective Robin boundary faces add strictly positive conductance g_b = h A_b > 0, ensuring strict diagonal dominance on boundary rows. "
+      "Because the tetrahedral mesh graph is connected (irreducible), A is irreducibly diagonally dominant with positive diagonals, "
+      "which mathematically guarantees that all eigenvalues λ_i > 0, ensuring robust, breakdown-free PCG convergence.", BODY),
+    SP(0.1),
+    P("<b>Physical Cause of FVM Tmax Exceeding FEM Tmax Near Source Patch:</b> At the Fine level, FVM Tmax is 61.23 °C vs FEM Tmax of 60.83 °C (Δ = +0.40 °C). "
+      "Investigation reveals that FEM distributes surface Neumann flux variationally across 3 nodes (q·A/3), diffusing heat smoothly across all elements sharing those nodes. "
+      "FVM deposits the entire boundary face flux directly into the single adjacent control volume cell (b_P += q·A). In the patch zone, "
+      "tetrahedral cell volumes vary by a factor of 5.80× (5.23 × 10⁻¹⁰ to 3.03 × 10⁻⁹ m³) due to geometric boundary refinement (mean radius ratio remains healthy at 0.83; "
+      "these are graded elements, not degenerate geometric slivers), resulting in localized cell-centered volumetric heating (q·A/V_P). "
+      "Sampling identical physical points near the patch confirms this gradient: Probes 9–12 exhibit differences of 0.47 °C to 0.68 °C "
+      "(Probe 9: FEM 60.37 vs FVM 60.98 °C; Probe 10: 59.68 vs 60.15 °C; Probe 11: 59.25 vs 59.84 °C; Probe 12: 59.19 vs 59.87 °C), "
+      "directly matching the localized numerical flux deposition mechanism.", BODY),
     PageBreak(),
 ]
 
@@ -890,14 +901,15 @@ mq_data = [
     ["Tetrahedra (FVM DOFs)", "8,249", "16,134", "36,671"],
     ["FDM Solid Voxel Count", "20,700", "145,080", "487,620"],
     ["Average Tetrahedral Quality (Jacobian)", "0.78", "0.81", "0.83"],
-    ["Maximum Non-Orthogonality Angle", "63.2°", "61.8°", "60.4°"],
-    ["Mean Non-Orthogonality Angle", "18.4°", "17.9°", "17.3°"],
+    ["Maximum Non-Orthogonality Angle", "63.21°", "58.46°", "58.36°"],
+    ["Mean Non-Orthogonality Angle", "27.16°", "23.02°", "16.82°"],
     ["Exposed Boundary Triangles", "3,208", "6,312", "13,580"],
 ]
 story += [
     make_table(mq_data[0], mq_data[1:], col_widths=[7*cm, 3*cm, 3*cm, 3*cm]),
     SP(0.2),
-    P("<b>Non-Orthogonality Considerations:</b> Tetrahedra near the acute 1.2 mm fin tips exhibit non-orthogonality up to 60.4°. "
+    P("<b>Non-Orthogonality Considerations:</b> Tetrahedra near the acute 1.2 mm fin tips exhibit non-orthogonality up to 58.36° on the fine mesh "
+      "(63.21° on coarse, 58.46° on medium), while the domain-wide mean non-orthogonality drops from 27.16° down to 16.82° with grid refinement. "
       "The deferred Green-Gauss correction in FVM successfully prevents numerical instability while preserving conservation, "
       "as confirmed by the FVM energy balance error of 3.5×10⁻¹⁴.", BODY),
     PageBreak(),
