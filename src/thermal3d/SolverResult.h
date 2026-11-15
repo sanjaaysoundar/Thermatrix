@@ -48,7 +48,7 @@ struct SolverResult {
     double T_min  { 0.0 };
     double T_max  { 0.0 };
     double T_avg  { 0.0 };
-    double T_src  { 0.0 };     ///< Average T on the source patch (junction T proxy)
+    double T_src  { 0.0 };     ///< Average T on the source patch (heat-flux boundary)
 
     // --- Energy balance -----------------------------------------------------
     double Q_in     { 0.0 };   ///< Prescribed heat input [W]

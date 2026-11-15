@@ -718,8 +718,7 @@ story += fig(VIZ/"Benchmark_Charts"/"fin_count_sweep.png", width=16*cm, max_heig
 story += [
     SP(0.2),
     P("<b>Thermal Engineering Insights:</b> Adding fins dramatically expands the exposed convective surface area: "
-      "going from 3 to 9 fins reduces peak operating temperature by 42.6 °C (from 103.2 °C down to 60.6 °C), "
-      "safely keeping the silicon source below typical 85 °C thermal throttling thresholds. "
+      "going from 3 to 9 fins reduces peak operating temperature by 42.6 °C (from 103.2 °C down to 60.6 °C). "
       "FDM runtime escalates from 738 ms to 1523 ms as more solid cells populate the domain.", BODY),
     PageBreak(),
 ]

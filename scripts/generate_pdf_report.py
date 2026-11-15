@@ -258,7 +258,7 @@ def create_report():
     story.append(Paragraph(
         "In electronic power converters, automotive motor drives, and telecommunications base stations, semiconductor devices dissipate high localized heat fluxes. "
         "Passive and fan-assisted extruded aluminium heat sinks are the predominant thermal management component due to their low cost, high thermal conductivity, "
-        "and extensive convective surface area. Accurately predicting the junction hot-spot temperature and overall convective dissipation rate is vital for hardware reliability. "
+        "and extensive convective surface area. Accurately predicting the heat-sink peak temperature and overall convective dissipation rate is vital for hardware reliability. "
         "While commercial multiphysics packages provide black-box solutions, developing native, robust, zero-dependency C++ simulation solvers is essential for embedded workstations, "
         "real-time digital twins, and safety-critical hardware-in-the-loop engineering platforms.", body_style
     ))
@@ -466,7 +466,7 @@ def create_report():
 
     story.append(Paragraph(
         "In Case A, low external convection limits heat extraction, causing heat to build up across the base plate. "
-        "The peak junction temperature reaches <b>59.84°C</b> with an average heat sink temperature of <b>56.31°C</b> (temperature rise ΔT_avg = 31.31 K). "
+        "The peak heat-sink temperature reaches <b>59.84°C</b> with an average heat sink temperature of <b>56.31°C</b> (temperature rise ΔT_avg = 31.31 K). "
         "In Case B, increased convection (h = 25 W/m²K) accelerates fin heat rejection, lowering peak temperature to <b>41.19°C</b> and average temperature to <b>37.68°C</b> (ΔT_avg = 12.68 K). "
         "Because Aluminium 6061 possesses high thermal conductivity (167 W/mK), the base plate is relatively isothermal, with only a 4.70°C gradient between the source hot-spot and outer fin tips.", body_style
     ))
