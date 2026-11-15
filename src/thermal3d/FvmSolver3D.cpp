@@ -257,6 +257,22 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
     result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
     result.n_nnz = A.nnz();
 
+    // Matrix symmetry and diagonal diagnostics (r4-7)
+    double diff_sq = 0.0, norm_sq = 0.0;
+    double min_diag = (A.nrows > 0) ? 1e30 : 0.0;
+    for (int i = 0; i < A.nrows; ++i) {
+        min_diag = std::min(min_diag, A.get(i, i));
+        for (int p_idx = A.row_ptr[i]; p_idx < A.row_ptr[i + 1]; ++p_idx) {
+            int j = A.col_idx[p_idx];
+            double a_ij = A.values[p_idx];
+            double a_ji = A.get(j, i);
+            diff_sq += (a_ij - a_ji) * (a_ij - a_ji);
+            norm_sq += a_ij * a_ij;
+        }
+    }
+    quality_stats_.symmetry_norm = (norm_sq > 0.0) ? std::sqrt(diff_sq) / std::sqrt(norm_sq) : 0.0;
+    quality_stats_.min_diagonal = min_diag;
+
     // 4. Linear Solve: PCG with IC(0) / Jacobi or SSOR
     std::vector<double> T(n_cells, T_inf);
     SolverParams p = lparams;
@@ -264,22 +280,33 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
 
     Preconditioner precond;
     std::string method_name = p.method;
+    int ic0_fallbacks = 0;
+    bool ic0_completed = true;
     if (p.method == "PCG-Jacobi" || p.method == "Jacobi" || p.method == "jacobi") {
         precond = make_jacobi_precond(A);
         method_name = "PCG-Jacobi";
     } else if (p.method == "SSOR" || p.method == "ssor") {
         method_name = "SSOR";
     } else {
-        precond = make_ic0_precond(A);
-        method_name = "PCG-IC0";
+        try {
+            precond = make_ic0_precond(A, &ic0_fallbacks);
+            method_name = "PCG-IC0";
+        } catch (...) {
+            ic0_completed = false;
+            precond = make_jacobi_precond(A);
+            method_name = "PCG-Jacobi";
+        }
     }
+    quality_stats_.ic0_fallbacks = ic0_fallbacks;
+    quality_stats_.ic0_completed = ic0_completed;
 
     auto t_sol_0 = Clock::now();
-    // 2 outer deferred-correction iterations for non-orthogonal flux
+    // Outer deferred-correction iterations for non-orthogonal flux
     int total_iters = 0;
     double final_res = 0.0;
     bool converged = false;
 
+    quality_stats_.outer_residuals.clear();
     int outer_loops = std::max(1, n_outer_);
     for (int corr = 0; corr < outer_loops; ++corr) {
         // Compute non-orthogonal deferred source: b_corr = b + b_no(T)
@@ -341,6 +368,7 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
         total_iters += sol_res.iterations;
         final_res = sol_res.final_rel_res;
         converged = sol_res.converged;
+        quality_stats_.outer_residuals.push_back(sol_res.final_rel_res);
     }
 
     auto t_sol_1 = Clock::now();
@@ -577,6 +605,7 @@ SolverResult FvmSolver3D::solve_mms(
         total_iters += sol_res.iterations;
         final_res = sol_res.final_rel_res;
         converged = sol_res.converged;
+        quality_stats_.outer_residuals.push_back(sol_res.final_rel_res);
     }
 
     auto t_sol_1 = Clock::now();

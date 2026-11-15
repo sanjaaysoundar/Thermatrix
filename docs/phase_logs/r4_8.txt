@@ -1,0 +1,54 @@
+r4-8: Explicit Numeric Criteria and Threshold Column in validation_results.csv
+=============================================================================
+
+1. Changes:
+- Replaced bare "PASS" strings in CSV export (`VerificationSuiteResult::export_csv`)
+  with explicit numeric acceptance criteria across all verification sections.
+- Added new CSV header column `threshold` to clearly delineate acceptance criteria
+  from observed values.
+- Non-monotonic GCI quantities are explicitly flagged with `NON-MONOTONIC` status
+  under threshold `requires |e21|<|e32| same sign`.
+- Documented probe sampling methods as separate informative rows:
+  * FEM: barycentric interpolation
+  * FDM: trilinear interpolation (nearest solid near staircase)
+  * FVM: cell value plus Green-Gauss gradient correction
+
+2. Summary of Verification Thresholds:
+- Consensus_Tmax:
+  * Consensus Spread: < 3.0 °C (Observed: 0.0 °C, PASS)
+  * Finer FEM Cross-Check: < 3.0 °C diff (Observed: 0.0 °C, PASS)
+- Consensus_Tavg:
+  * Consensus Spread: < 1.5 °C (Observed: 0.0 °C, PASS)
+  * Finer FEM Cross-Check: < 1.5 °C diff (Observed: 0.412 °C, PASS)
+- Pairwise RMSE:
+  * FEM vs FDM: < 3.0 °C (Observed: 0.416 °C, PASS)
+  * FEM vs FVM: < 3.0 °C (Observed: 0.250 °C, PASS)
+  * FDM vs FVM: < 3.0 °C (Observed: 0.546 °C, PASS)
+- Solver RMSE vs Consensus Reference:
+  * FEM (barycentric): < 2.0 °C (Observed: 0.137 °C, PASS)
+  * FDM (trilinear): < 2.5 °C (Observed: 0.315 °C, PASS)
+  * FVM (Green-Gauss): < 2.0 °C (Observed: 0.245 °C, PASS)
+  * Finer FEM Cross-Check: < 2.0 °C (Observed: 0.136 °C, PASS)
+- 1D Slab Test:
+  * FEM L2 Relative Error: < 1.0% (Observed: 1.49e-09%, PASS)
+  * FDM L2 Relative Error: < 1.0% (Observed: 5.39e-09%, PASS)
+  * FVM L2 Relative Error: < 2.0% (Observed: 0.979%, PASS)
+  * FEM Linf Relative Error: < 2.0% (Observed: 1.50e-09%, PASS)
+  * FDM Linf Relative Error: < 2.0% (Observed: 5.39e-09%, PASS)
+  * FVM Linf Relative Error: < 3.0% (Observed: 1.702%, PASS)
+  * FEM Max Absolute Error: < 0.5 K (Observed: 6.01e-10 K, PASS)
+  * FDM Max Absolute Error: < 0.5 K (Observed: 2.16e-09 K, PASS)
+  * FVM Max Absolute Error: < 1.0 K (Observed: 0.685 K, PASS)
+- MMS Convergence Order:
+  * FEM Observed Order p: p >= 1.5 (Observed: 1.847, PASS)
+  * FDM Observed Order p: p >= 1.5 (Observed: 1.863, PASS)
+  * FVM Observed Order p: p >= 0.75 (Observed: 0.867, PASS)
+- GCI Quantities:
+  * FDM T_avg: monotonic AND 0 < GCI < 10% (Observed: 0.000569%, p=6.423, PASS)
+  * FEM T_max, FEM T_avg, FDM T_max, FVM T_max, FVM T_avg:
+    requires |e21|<|e32| same sign (NON-MONOTONIC)
+- 30 Fixed Probes:
+  * Method Spread across extrapolated values: < 5.0 °C (All 30 Probes: PASS)
+
+All 8 ctest tests pass (100%).
+Both results/validation_results.csv and THERMATRIX_ASSIGNMENT_2/Results/validation_results.csv updated.

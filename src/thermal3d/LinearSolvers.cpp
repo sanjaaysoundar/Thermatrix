@@ -76,7 +76,8 @@ Preconditioner make_jacobi_precond(const SparseCsr& A) {
 //        Forward:   solve L  y = z  (lower-tri forward substitution)
 //        Backward:  solve Lᵀ x = y  (upper-tri backward substitution)
 // ---------------------------------------------------------------------------
-Preconditioner make_ic0_precond(const SparseCsr& A) {
+Preconditioner make_ic0_precond(const SparseCsr& A, int* n_fallbacks) {
+    if (n_fallbacks) *n_fallbacks = 0;
     if (A.nrows != A.ncols)
         throw std::runtime_error("IC0: matrix must be square");
 
@@ -214,6 +215,7 @@ Preconditioner make_ic0_precond(const SparseCsr& A) {
         double d = L_val[p_diag] - sum_sq;
         if (d <= 0.0) {
             // Add a small diagonal perturbation if necessary (modified IC)
+            if (n_fallbacks) (*n_fallbacks)++;
             d = 1e-10 * L_val[p_diag];
         }
         L_val[p_diag] = std::sqrt(d);

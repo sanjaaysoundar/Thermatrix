@@ -57,8 +57,10 @@ Preconditioner make_jacobi_precond(const SparseCsr& A);
 //   The matrix A must be symmetric and stored with BOTH upper and lower
 //   triangles (or at least the lower triangle for the factorisation).
 //   Returns the apply functor: M⁻¹ z = L⁻ᵀ L⁻¹ z.
+//   If n_fallbacks is provided, receives the number of non-positive pivots
+//   repaired with diagonal perturbation.
 // ---------------------------------------------------------------------------
-Preconditioner make_ic0_precond(const SparseCsr& A);
+Preconditioner make_ic0_precond(const SparseCsr& A, int* n_fallbacks = nullptr);
 
 // ---------------------------------------------------------------------------
 // Preconditioned Conjugate Gradient

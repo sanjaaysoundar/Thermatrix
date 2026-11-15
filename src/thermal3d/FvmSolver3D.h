@@ -18,6 +18,13 @@ struct MeshQualityStats {
     double mean_non_ortho_deg { 0.0 };
     int    n_internal_faces  { 0 };
     int    n_boundary_faces  { 0 };
+
+    // r4-7 telemetry
+    double symmetry_norm     { 0.0 };   ///< ||A - A^T||_F / ||A||_F
+    double min_diagonal      { 0.0 };   ///< min_i A_ii
+    int    ic0_fallbacks     { 0 };     ///< number of modified-diagonal fallbacks in IC(0)
+    bool   ic0_completed     { true };  ///< true if IC(0) succeeded without complete failure
+    std::vector<double> outer_residuals; ///< residual norm after each outer deferred correction loop
 };
 
 class FvmSolver3D {
