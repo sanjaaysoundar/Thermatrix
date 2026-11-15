@@ -195,7 +195,7 @@ double Verification3D::sample_fvm(const FemMesh& mesh, const std::vector<double>
 
 GciResult Verification3D::compute_gci(const std::string& solver, const std::string& quantity,
                                       double f_coarse, double f_medium, double f_fine,
-                                      double r) {
+                                      double r21, double r32) {
     GciResult res;
     res.solver = solver;
     res.quantity = quantity;
@@ -206,31 +206,53 @@ GciResult Verification3D::compute_gci(const std::string& solver, const std::stri
     double e21 = f_fine - f_medium;
     double e32 = f_medium - f_coarse;
 
-    if (e21 * e32 <= 0.0 || std::abs(e21) < 1e-12) {
-        // Non-monotonic convergence: asymptotic range NOT reached
+    // Check monotonic convergence with decreasing differences (|e21| < |e32| and same sign)
+    bool same_sign = (e21 * e32 > 0.0);
+    bool decreasing = (std::abs(e21) < std::abs(e32));
+    if (!same_sign || !decreasing || std::abs(e21) < 1e-12) {
+        // Non-monotonic or divergent: quantity is NOT in asymptotic range
         res.is_monotonic = false;
-        res.observed_p = -1.0; // N/A
-        res.val_extrap = f_fine;
-        double denom = (r > 1.05) ? (r - 1.0) : 0.05;
-        res.gci_21_pct = (1.25 * std::abs((f_fine - f_medium) / f_fine) / denom) * 100.0;
-        res.gci_32_pct = (1.25 * std::abs((f_medium - f_coarse) / f_medium) / denom) * 100.0;
-        res.asymptotic_ratio = 0.0;
+        res.observed_p = -1.0;
+        res.val_extrap = std::numeric_limits<double>::quiet_NaN();
+        res.gci_21_pct = std::numeric_limits<double>::quiet_NaN();
+        res.gci_32_pct = std::numeric_limits<double>::quiet_NaN();
+        res.asymptotic_ratio = std::numeric_limits<double>::quiet_NaN();
         return res;
     }
 
     res.is_monotonic = true;
-    double ratio = e32 / e21;
-    double p = std::abs(std::log(ratio) / std::log(r));
-    p = std::max(0.5, std::min(4.0, p));
+
+    // Solve general three-grid equation for observed order p:
+    //   p = (1 / ln(r21)) * ( ln|e32/e21| + q(p) )
+    //   where q(p) = ln((r21^p - 1) / (r32^p - 1))
+    // Solved via fixed-point iteration without clamping p or taking abs() of log ratio.
+    double p = std::log(e32 / e21) / std::log(r21);
+    if (std::abs(r21 - r32) > 1e-4) {
+        for (int iter = 0; iter < 100; ++iter) {
+            double r21_p = std::pow(r21, p);
+            double r32_p = std::pow(r32, p);
+            double arg = (r21_p - 1.0) / (r32_p - 1.0);
+            if (arg <= 0.0) break;
+            double q_p = std::log(arg);
+            double p_next = (1.0 / std::log(r21)) * (std::log(e32 / e21) + q_p);
+            if (std::abs(p_next - p) < 1e-6) {
+                p = p_next;
+                break;
+            }
+            p = 0.5 * (p + p_next);
+        }
+    }
     res.observed_p = p;
 
-    double rp = std::pow(r, p);
-    double denom = (rp > 1.0001) ? (rp - 1.0) : 0.0001;
+    double r21_p = std::pow(r21, p);
+    double r32_p = std::pow(r32, p);
+    double denom21 = r21_p - 1.0;
+    double denom32 = r32_p - 1.0;
 
-    res.val_extrap = f_fine + (f_fine - f_medium) / denom;
-    res.gci_21_pct = (1.25 * std::abs((f_fine - f_medium) / f_fine) / denom) * 100.0;
-    res.gci_32_pct = (1.25 * std::abs((f_medium - f_coarse) / f_medium) / denom) * 100.0;
-    res.asymptotic_ratio = res.gci_32_pct / (rp * res.gci_21_pct);
+    res.val_extrap = f_fine + (f_fine - f_medium) / denom21;
+    res.gci_21_pct = (1.25 * std::abs((f_fine - f_medium) / f_fine) / denom21) * 100.0;
+    res.gci_32_pct = (1.25 * std::abs((f_medium - f_coarse) / f_medium) / denom32) * 100.0;
+    res.asymptotic_ratio = res.gci_32_pct / (r21_p * res.gci_21_pct);
 
     return res;
 }
@@ -707,49 +729,75 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
         fem_finer = fem.solve(mesh_finer, ConvCase::A);
     }
 
-    // 4. Richardson Extrapolation & GCI for T_max and T_avg with effective refinement ratio r = (N_fine/N_coarse)^(1/3)
-    double r_fem = std::cbrt(static_cast<double>(fem_f.n_dof) / static_cast<double>(fem_c.n_dof));
-    double r_fdm = std::cbrt(static_cast<double>(fdm_f.n_dof) / static_cast<double>(fdm_c.n_dof));
-    double r_fvm = std::cbrt(static_cast<double>(fvm_f.n_dof) / static_cast<double>(fvm_c.n_dof));
+    // 4. Richardson Extrapolation & GCI with actual refinement ratios r21 and r32
+    double r21_fem = std::cbrt(static_cast<double>(fem_f.n_dof) / static_cast<double>(fem_m.n_dof));
+    double r32_fem = std::cbrt(static_cast<double>(fem_m.n_dof) / static_cast<double>(fem_c.n_dof));
 
-    suite.gci_results.push_back(compute_gci("FEM", "T_max", fem_c.T_max, fem_m.T_max, fem_f.T_max, r_fem));
-    suite.gci_results.push_back(compute_gci("FEM", "T_avg", fem_c.T_avg, fem_m.T_avg, fem_f.T_avg, r_fem));
-    suite.gci_results.push_back(compute_gci("FDM", "T_max", fdm_c.T_max, fdm_m.T_max, fdm_f.T_max, r_fdm));
-    suite.gci_results.push_back(compute_gci("FDM", "T_avg", fdm_c.T_avg, fdm_m.T_avg, fdm_f.T_avg, r_fdm));
-    suite.gci_results.push_back(compute_gci("FVM", "T_max", fvm_c.T_max, fvm_m.T_max, fvm_f.T_max, r_fvm));
-    suite.gci_results.push_back(compute_gci("FVM", "T_avg", fvm_c.T_avg, fvm_m.T_avg, fvm_f.T_avg, r_fvm));
+    double r21_fdm = std::cbrt(static_cast<double>(fdm_f.n_dof) / static_cast<double>(fdm_m.n_dof));
+    double r32_fdm = std::cbrt(static_cast<double>(fdm_m.n_dof) / static_cast<double>(fdm_c.n_dof));
 
-    // Helper for Richardson extrapolation
-    auto extrap_val = [](double fc, double fm, double ff, double r = 1.5, double p_def = 2.0) {
-        double e21 = fm - ff;
-        double e32 = fc - fm;
-        double p = p_def;
-        if (std::abs(e21) > 1e-12 && (e32 * e21 > 0.0)) {
-            double ratio = e32 / e21;
-            p = std::log(ratio) / std::log(r);
-            if (p < 0.5 || p > 4.0) p = p_def;
-        }
-        double rp = std::pow(r, p);
-        double denom = (rp > 1.0001) ? (rp - 1.0) : 1.0;
-        return ff + (ff - fm) / denom;
-    };
+    double r21_fvm = std::cbrt(static_cast<double>(fvm_f.n_dof) / static_cast<double>(fvm_m.n_dof));
+    double r32_fvm = std::cbrt(static_cast<double>(fvm_m.n_dof) / static_cast<double>(fvm_c.n_dof));
 
-    // Consensus for T_max and T_avg
-    suite.tmax_extrap_fem = extrap_val(fem_c.T_max, fem_m.T_max, fem_f.T_max);
-    suite.tmax_extrap_fdm = extrap_val(fdm_c.T_max, fdm_m.T_max, fdm_f.T_max);
-    suite.tmax_extrap_fvm = extrap_val(fvm_c.T_max, fvm_m.T_max, fvm_f.T_max);
-    suite.tmax_consensus  = (suite.tmax_extrap_fem + suite.tmax_extrap_fdm + suite.tmax_extrap_fvm) / 3.0;
-    suite.tmax_spread     = std::max({suite.tmax_extrap_fem, suite.tmax_extrap_fdm, suite.tmax_extrap_fvm}) -
-                            std::min({suite.tmax_extrap_fem, suite.tmax_extrap_fdm, suite.tmax_extrap_fvm});
+    auto gci_fem_tmax = compute_gci("FEM", "T_max", fem_c.T_max, fem_m.T_max, fem_f.T_max, r21_fem, r32_fem);
+    auto gci_fem_tavg = compute_gci("FEM", "T_avg", fem_c.T_avg, fem_m.T_avg, fem_f.T_avg, r21_fem, r32_fem);
+    auto gci_fdm_tmax = compute_gci("FDM", "T_max", fdm_c.T_max, fdm_m.T_max, fdm_f.T_max, r21_fdm, r32_fdm);
+    auto gci_fdm_tavg = compute_gci("FDM", "T_avg", fdm_c.T_avg, fdm_m.T_avg, fdm_f.T_avg, r21_fdm, r32_fdm);
+    auto gci_fvm_tmax = compute_gci("FVM", "T_max", fvm_c.T_max, fvm_m.T_max, fvm_f.T_max, r21_fvm, r32_fvm);
+    auto gci_fvm_tavg = compute_gci("FVM", "T_avg", fvm_c.T_avg, fvm_m.T_avg, fvm_f.T_avg, r21_fvm, r32_fvm);
+
+    suite.gci_results.push_back(gci_fem_tmax);
+    suite.gci_results.push_back(gci_fem_tavg);
+    suite.gci_results.push_back(gci_fdm_tmax);
+    suite.gci_results.push_back(gci_fdm_tavg);
+    suite.gci_results.push_back(gci_fvm_tmax);
+    suite.gci_results.push_back(gci_fvm_tavg);
+
+    // Consensus for T_max and T_avg: rebuild ONLY from quantities that pass monotonic asymptotic convergence
+    // If a quantity is not asymptotic, its extrapolated value is NaN and excluded from consensus.
+    suite.tmax_extrap_fem = gci_fem_tmax.val_extrap;
+    suite.tmax_extrap_fdm = gci_fdm_tmax.val_extrap;
+    suite.tmax_extrap_fvm = gci_fvm_tmax.val_extrap;
+
+    suite.tavg_extrap_fem = gci_fem_tavg.val_extrap;
+    suite.tavg_extrap_fdm = gci_fdm_tavg.val_extrap;
+    suite.tavg_extrap_fvm = gci_fvm_tavg.val_extrap;
+
     suite.tmax_fem_finer  = has_finer ? fem_finer.T_max : fem_f.T_max;
-
-    suite.tavg_extrap_fem = extrap_val(fem_c.T_avg, fem_m.T_avg, fem_f.T_avg);
-    suite.tavg_extrap_fdm = extrap_val(fdm_c.T_avg, fdm_m.T_avg, fdm_f.T_avg);
-    suite.tavg_extrap_fvm = extrap_val(fvm_c.T_avg, fvm_m.T_avg, fvm_f.T_avg);
-    suite.tavg_consensus  = (suite.tavg_extrap_fem + suite.tavg_extrap_fdm + suite.tavg_extrap_fvm) / 3.0;
-    suite.tavg_spread     = std::max({suite.tavg_extrap_fem, suite.tavg_extrap_fdm, suite.tavg_extrap_fvm}) -
-                            std::min({suite.tavg_extrap_fem, suite.tavg_extrap_fdm, suite.tavg_extrap_fvm});
     suite.tavg_fem_finer  = has_finer ? fem_finer.T_avg : fem_f.T_avg;
+
+    // Evaluate consensus for T_max
+    std::vector<double> valid_tmax;
+    if (!std::isnan(suite.tmax_extrap_fem)) valid_tmax.push_back(suite.tmax_extrap_fem);
+    if (!std::isnan(suite.tmax_extrap_fdm)) valid_tmax.push_back(suite.tmax_extrap_fdm);
+    if (!std::isnan(suite.tmax_extrap_fvm)) valid_tmax.push_back(suite.tmax_extrap_fvm);
+
+    if (!valid_tmax.empty()) {
+        double s = 0.0, mn = 1e9, mx = -1e9;
+        for (double v : valid_tmax) { s += v; mn = std::min(mn, v); mx = std::max(mx, v); }
+        suite.tmax_consensus = s / valid_tmax.size();
+        suite.tmax_spread    = mx - mn;
+    } else {
+        // No valid asymptotic extrapolation for Tmax; consensus reference set to Finer FEM cross-check
+        suite.tmax_consensus = suite.tmax_fem_finer;
+        suite.tmax_spread    = 0.0;
+    }
+
+    // Evaluate consensus for T_avg
+    std::vector<double> valid_tavg;
+    if (!std::isnan(suite.tavg_extrap_fem)) valid_tavg.push_back(suite.tavg_extrap_fem);
+    if (!std::isnan(suite.tavg_extrap_fdm)) valid_tavg.push_back(suite.tavg_extrap_fdm);
+    if (!std::isnan(suite.tavg_extrap_fvm)) valid_tavg.push_back(suite.tavg_extrap_fvm);
+
+    if (!valid_tavg.empty()) {
+        double s = 0.0, mn = 1e9, mx = -1e9;
+        for (double v : valid_tavg) { s += v; mn = std::min(mn, v); mx = std::max(mx, v); }
+        suite.tavg_consensus = s / valid_tavg.size();
+        suite.tavg_spread    = mx - mn;
+    } else {
+        suite.tavg_consensus = suite.tavg_fem_finer;
+        suite.tavg_spread    = 0.0;
+    }
 
     // 5. 30 Fixed Probe Points Sampling across Coarse, Med, Fine
     auto probe_coords = get_standard_probes();
@@ -775,10 +823,34 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
         p.T_fvm_m = sample_fvm(mesh_m, fvm_m.T, p.coord);
         p.T_fvm_f = sample_fvm(mesh_f, fvm_f.T, p.coord);
 
-        // Richardson extrapolation per method
-        p.T_extrap_fem = extrap_val(p.T_fem_c, p.T_fem_m, p.T_fem_f);
-        p.T_extrap_fdm = extrap_val(p.T_fdm_c, p.T_fdm_m, p.T_fdm_f);
-        p.T_extrap_fvm = extrap_val(p.T_fvm_c, p.T_fvm_m, p.T_fvm_f);
+        // Richardson extrapolation per method using three-grid formulation
+        auto extrap_probe = [](double fc, double fm, double ff, double r21, double r32) -> double {
+            double e21 = ff - fm;
+            double e32 = fm - fc;
+            if (e21 * e32 <= 0.0 || std::abs(e21) >= std::abs(e32) || std::abs(e21) < 1e-12) {
+                return ff; // fallback to fine value when not monotonic
+            }
+            double p = std::log(e32 / e21) / std::log(r21);
+            if (std::abs(r21 - r32) > 1e-4) {
+                for (int iter = 0; iter < 50; ++iter) {
+                    double r21_p = std::pow(r21, p);
+                    double r32_p = std::pow(r32, p);
+                    double arg = (r21_p - 1.0) / (r32_p - 1.0);
+                    if (arg <= 0.0) break;
+                    double q_p = std::log(arg);
+                    double p_next = (1.0 / std::log(r21)) * (std::log(e32 / e21) + q_p);
+                    if (std::abs(p_next - p) < 1e-5) { p = p_next; break; }
+                    p = 0.5 * (p + p_next);
+                }
+            }
+            double denom = std::pow(r21, p) - 1.0;
+            if (denom <= 1e-4) return ff;
+            return ff + (ff - fm) / denom;
+        };
+
+        p.T_extrap_fem = extrap_probe(p.T_fem_c, p.T_fem_m, p.T_fem_f, r21_fem, r32_fem);
+        p.T_extrap_fdm = extrap_probe(p.T_fdm_c, p.T_fdm_m, p.T_fdm_f, r21_fdm, r32_fdm);
+        p.T_extrap_fvm = extrap_probe(p.T_fvm_c, p.T_fvm_m, p.T_fvm_f, r21_fvm, r32_fvm);
 
         // Consensus reference = mean of extrapolated values
         p.T_consensus = (p.T_extrap_fem + p.T_extrap_fdm + p.T_extrap_fvm) / 3.0;

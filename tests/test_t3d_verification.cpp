@@ -113,7 +113,11 @@ void test_gci_and_probes() {
                   << " | Order p=" << (g.is_monotonic ? std::to_string(g.observed_p) : "N/A (Non-monotonic)")
                   << " | Asymp=" << g.asymptotic_ratio << "\n";
 
-        ASSERT_TRUE(g.gci_21_pct > 0.0 && g.gci_21_pct < 10.0, "GCI_21 is reasonable (< 10%)");
+        if (g.is_monotonic) {
+            ASSERT_TRUE(g.gci_21_pct > 0.0 && g.gci_21_pct < 10.0, "GCI_21 is reasonable (< 10%)");
+        } else {
+            ASSERT_TRUE(std::isnan(g.gci_21_pct), "Non-monotonic quantity reports NaN for GCI");
+        }
     }
 }
 

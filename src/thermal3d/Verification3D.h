@@ -140,10 +140,10 @@ public:
     // 30 Standard heat-sink probe locations
     static std::vector<Point3D> get_standard_probes();
 
-    // Richardson extrapolation and GCI calculation helper
+    // Richardson extrapolation and GCI calculation helper using general 3-grid formulation
     static GciResult compute_gci(const std::string& solver, const std::string& quantity,
                                  double f_coarse, double f_medium, double f_fine,
-                                 double r = 1.5);
+                                 double r21, double r32);
 
 private:
     ThermalProblem prob_;

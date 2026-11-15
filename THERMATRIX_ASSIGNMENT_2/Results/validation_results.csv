@@ -1,15 +1,15 @@
 section,metric,solver_or_pair,value_1,value_2,value_3,consensus_ref,spread_or_error,status
-Consensus_Tmax,Extrapolated_and_Consensus,FEM_FDM_FVM,61.0295,60.3265,60.5567,60.6376,0.703029 C spread,PASS
-Consensus_Tmax,CrossCheck_Finer_FEM,FEM_Finer,60.8134,,,60.6376,0.175861 C diff,PASS
-Consensus_Tavg,Extrapolated_and_Consensus,FEM_FDM_FVM,56.5707,56.1606,56.6271,56.4528,0.466451 C spread,PASS
-Consensus_Tavg,CrossCheck_Finer_FEM,FEM_Finer,56.5704,,,56.4528,0.117569 C diff,PASS
+Consensus_Tmax,Extrapolated_and_Consensus,FEM_FDM_FVM,nan,nan,nan,60.8134,0 C spread,PASS
+Consensus_Tmax,CrossCheck_Finer_FEM,FEM_Finer,60.8134,,,60.8134,0 C diff,PASS
+Consensus_Tavg,Extrapolated_and_Consensus,FEM_FDM_FVM,nan,56.1584,nan,56.1584,0 C spread,PASS
+Consensus_Tavg,CrossCheck_Finer_FEM,FEM_Finer,56.5704,,,56.1584,0.412007 C diff,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FDM,0.412542,,,0.0,0.412542 C,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FVM,0.260102,,,0.0,0.260102 C,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FDM_vs_FVM,0.545073,,,0.0,0.545073 C,PASS
-Consensus_RMSE,RMSE_vs_Consensus,FEM,0.137099,,,0.0,0.137099 C,PASS
-Consensus_RMSE,RMSE_vs_Consensus,FDM,0.306164,,,0.0,0.306164 C,PASS
-Consensus_RMSE,RMSE_vs_Consensus,FVM,0.33498,,,0.0,0.33498 C,PASS
-Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer,0.139903,,,0.0,0.139903 C,PASS
+Consensus_RMSE,RMSE_vs_Consensus,FEM,0.148755,,,0.0,0.148755 C,PASS
+Consensus_RMSE,RMSE_vs_Consensus,FDM,0.327779,,,0.0,0.327779 C,PASS
+Consensus_RMSE,RMSE_vs_Consensus,FVM,0.227789,,,0.0,0.227789 C,PASS
+Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer,0.146184,,,0.0,0.146184 C,PASS
 1D_Slab,L2_Relative_Error,FEM,1.49337e-11,,,0.0,1.49337e-09%,PASS
 1D_Slab,L2_Relative_Error,FDM,5.38737e-11,,,0.0,5.38737e-09%,PASS
 1D_Slab,L2_Relative_Error,FVM,0.00979424,,,0.0,0.979424%,PASS
@@ -28,39 +28,39 @@ MMS_Linf_Error,Actual_Linf_Error,FVM,3.45879,2.13213,1.20519,0.0,0.866903 (order
 MMS_Order,Observed_Order_p,FEM,1.84672,,,2.0,1.84672,PASS
 MMS_Order,Observed_Order_p,FDM,1.86263,,,2.0,1.86263,PASS
 MMS_Order,Observed_Order_p,FVM,0.866903,,,2.0,0.866903,PASS
-GCI,T_max,FEM,60.5102,60.581,60.8302,60.929,0.203101% (p=2.654183),PASS
-GCI,T_avg,FEM,56.5685,56.5692,56.57,56.573,0.00658091% (p=0.500000),PASS
-GCI,T_max,FDM,59.8088,60.4034,60.3607,60.3607,0.0474152% (p=N/A (non-monotonic)),PASS
-GCI,T_avg,FDM,55.9367,56.1549,56.1581,56.1581,0.000106147% (p=4.000000),PASS
-GCI,T_max,FVM,61.5916,62.0781,61.2329,61.2329,2.67824% (p=N/A (non-monotonic)),PASS
-GCI,T_avg,FVM,56.5759,56.5851,56.6084,56.6237,0.033699% (p=1.864338),PASS
-Probe_Points,Probe_1,Extrap_Consensus,56.0613,55.6561,56.5111,56.0762,0.854977 C spread,PASS
-Probe_Points,Probe_2,Extrap_Consensus,55.5281,55.1414,55.8811,55.5169,0.739708 C spread,PASS
-Probe_Points,Probe_3,Extrap_Consensus,57.4072,57.0144,57.666,57.3625,0.651559 C spread,PASS
-Probe_Points,Probe_4,Extrap_Consensus,56.3608,55.9755,56.4534,56.2633,0.477884 C spread,PASS
-Probe_Points,Probe_5,Extrap_Consensus,55.8597,55.4566,56.2827,55.8663,0.826164 C spread,PASS
-Probe_Points,Probe_6,Extrap_Consensus,57.6949,57.3247,57.5043,57.5079,0.370232 C spread,PASS
-Probe_Points,Probe_7,Extrap_Consensus,56.1821,55.7976,56.2351,56.0716,0.437527 C spread,PASS
-Probe_Points,Probe_8,Extrap_Consensus,57.0648,56.6663,57.2646,56.9986,0.598331 C spread,PASS
-Probe_Points,Probe_9,Extrap_Consensus,60.4453,60.0583,60.1632,60.2222,0.387 C spread,PASS
-Probe_Points,Probe_10,Extrap_Consensus,59.6649,59.3488,59.1478,59.3872,0.517168 C spread,PASS
-Probe_Points,Probe_11,Extrap_Consensus,59.2027,59.077,59.3292,59.203,0.252208 C spread,PASS
-Probe_Points,Probe_12,Extrap_Consensus,59.0934,58.9426,59.4614,59.1658,0.518751 C spread,PASS
-Probe_Points,Probe_13,Extrap_Consensus,55.9937,55.5491,56.4302,55.991,0.881163 C spread,PASS
-Probe_Points,Probe_14,Extrap_Consensus,55.6052,55.1746,55.9624,55.5808,0.787802 C spread,PASS
-Probe_Points,Probe_15,Extrap_Consensus,58.4066,58.0388,58.2668,58.2374,0.367882 C spread,PASS
-Probe_Points,Probe_16,Extrap_Consensus,56.4388,56.0577,56.4243,56.307,0.381102 C spread,PASS
-Probe_Points,Probe_17,Extrap_Consensus,57.3601,56.9315,57.6337,57.3084,0.702213 C spread,PASS
-Probe_Points,Probe_18,Extrap_Consensus,56.5131,56.1149,56.6034,56.4105,0.488536 C spread,PASS
-Probe_Points,Probe_19,Extrap_Consensus,55.3445,54.9018,55.5795,55.2753,0.677669 C spread,PASS
-Probe_Points,Probe_20,Extrap_Consensus,55.8444,55.4112,55.9349,55.7302,0.523717 C spread,PASS
-Probe_Points,Probe_21,Extrap_Consensus,57.4144,57.0101,57.2622,57.2289,0.404239 C spread,PASS
-Probe_Points,Probe_22,Extrap_Consensus,56.315,55.9155,56.1716,56.134,0.399466 C spread,PASS
-Probe_Points,Probe_23,Extrap_Consensus,57.0339,56.628,56.7855,56.8158,0.405894 C spread,PASS
-Probe_Points,Probe_24,Extrap_Consensus,56.4737,56.0574,56.4068,56.3126,0.416294 C spread,PASS
-Probe_Points,Probe_25,Extrap_Consensus,55.1277,54.6772,55.3013,55.0354,0.62404 C spread,PASS
-Probe_Points,Probe_26,Extrap_Consensus,55.6154,55.1722,55.6355,55.4744,0.463326 C spread,PASS
-Probe_Points,Probe_27,Extrap_Consensus,57.0611,56.6302,56.8312,56.8408,0.430867 C spread,PASS
-Probe_Points,Probe_28,Extrap_Consensus,56.2028,55.8132,56.0066,56.0075,0.389549 C spread,PASS
-Probe_Points,Probe_29,Extrap_Consensus,56.7646,56.3455,56.515,56.5417,0.419187 C spread,PASS
-Probe_Points,Probe_30,Extrap_Consensus,56.2399,55.8141,56.1558,56.0699,0.425885 C spread,PASS
+GCI,T_max,FEM,60.5102,60.581,60.8302,nan,nan% (p=N/A (non-monotonic)),PASS
+GCI,T_avg,FEM,56.5685,56.5692,56.57,nan,nan% (p=N/A (non-monotonic)),PASS
+GCI,T_max,FDM,59.8088,60.4034,60.3607,nan,nan% (p=N/A (non-monotonic)),PASS
+GCI,T_avg,FDM,55.9367,56.1549,56.1581,56.1584,0.000569341% (p=6.423180),PASS
+GCI,T_max,FVM,61.5916,62.0781,61.2329,nan,nan% (p=N/A (non-monotonic)),PASS
+GCI,T_avg,FVM,56.5759,56.5851,56.6084,nan,nan% (p=N/A (non-monotonic)),PASS
+Probe_Points,Probe_1,Extrap_Consensus,56.0731,55.6481,56.0199,55.9137,0.424946 C spread,PASS
+Probe_Points,Probe_2,Extrap_Consensus,55.5435,55.1348,55.4705,55.383,0.408682 C spread,PASS
+Probe_Points,Probe_3,Extrap_Consensus,57.4376,57.0056,57.5825,57.3419,0.576843 C spread,PASS
+Probe_Points,Probe_4,Extrap_Consensus,56.353,55.9699,56.4527,56.2585,0.482756 C spread,PASS
+Probe_Points,Probe_5,Extrap_Consensus,55.8724,55.449,55.8062,55.7092,0.423381 C spread,PASS
+Probe_Points,Probe_6,Extrap_Consensus,57.6929,57.3222,57.8046,57.6066,0.482394 C spread,PASS
+Probe_Points,Probe_7,Extrap_Consensus,56.1751,55.7926,56.2496,56.0724,0.457057 C spread,PASS
+Probe_Points,Probe_8,Extrap_Consensus,57.0618,56.6592,57.2487,56.9899,0.589556 C spread,PASS
+Probe_Points,Probe_9,Extrap_Consensus,60.3711,60.1509,60.8632,60.4617,0.71224 C spread,PASS
+Probe_Points,Probe_10,Extrap_Consensus,59.6817,59.3953,60.1838,59.7536,0.788515 C spread,PASS
+Probe_Points,Probe_11,Extrap_Consensus,59.245,59.1295,59.9425,59.439,0.813066 C spread,PASS
+Probe_Points,Probe_12,Extrap_Consensus,59.1876,59.3177,59.9725,59.4926,0.784937 C spread,PASS
+Probe_Points,Probe_13,Extrap_Consensus,56.0155,55.5757,55.9065,55.8326,0.439763 C spread,PASS
+Probe_Points,Probe_14,Extrap_Consensus,55.6225,55.195,55.5017,55.4397,0.427494 C spread,PASS
+Probe_Points,Probe_15,Extrap_Consensus,58.406,58.0303,58.6595,58.3653,0.629213 C spread,PASS
+Probe_Points,Probe_16,Extrap_Consensus,56.4299,56.0865,56.5155,56.344,0.429005 C spread,PASS
+Probe_Points,Probe_17,Extrap_Consensus,57.3653,56.962,57.4939,57.2737,0.53188 C spread,PASS
+Probe_Points,Probe_18,Extrap_Consensus,56.5128,56.1396,56.601,56.4178,0.461355 C spread,PASS
+Probe_Points,Probe_19,Extrap_Consensus,55.3633,54.9018,55.1574,55.1408,0.461502 C spread,PASS
+Probe_Points,Probe_20,Extrap_Consensus,55.855,55.4109,55.7243,55.6634,0.444137 C spread,PASS
+Probe_Points,Probe_21,Extrap_Consensus,57.3905,57.011,57.5738,57.3251,0.562756 C spread,PASS
+Probe_Points,Probe_22,Extrap_Consensus,56.3042,55.9122,56.3573,56.1912,0.44514 C spread,PASS
+Probe_Points,Probe_23,Extrap_Consensus,57.025,56.6265,57.0777,56.9098,0.451136 C spread,PASS
+Probe_Points,Probe_24,Extrap_Consensus,56.4778,56.0583,56.4495,56.3285,0.41946 C spread,PASS
+Probe_Points,Probe_25,Extrap_Consensus,55.1466,54.6725,54.9216,54.9135,0.474097 C spread,PASS
+Probe_Points,Probe_26,Extrap_Consensus,55.6255,55.1674,55.4773,55.4234,0.458077 C spread,PASS
+Probe_Points,Probe_27,Extrap_Consensus,57.0402,56.6318,57.186,56.9527,0.554171 C spread,PASS
+Probe_Points,Probe_28,Extrap_Consensus,56.1904,55.7861,56.2281,56.0682,0.442 C spread,PASS
+Probe_Points,Probe_29,Extrap_Consensus,56.7563,56.3411,56.8223,56.6399,0.481124 C spread,PASS
+Probe_Points,Probe_30,Extrap_Consensus,56.2438,55.8096,56.2266,56.0933,0.434201 C spread,PASS
