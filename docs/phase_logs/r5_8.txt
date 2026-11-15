@@ -1,0 +1,84 @@
+================================================================================
+ROUND 5 CORRECTION 8: TRACING DISPUTED VALUES (61.0295, 60.3265, 60.5567)
+================================================================================
+Timestamp: 2026-11-15T17:45:30+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. Origin and Audit of Disputed Values:
+---------------------------------------
+A thorough search across git commit history, codebase, and results logs traced the exact
+origin of the disputed values:
+  - Disputed values: 61.0295 °C, 60.3265 °C, 60.5567 °C (and consensus 60.6376 °C).
+  - First introduced in Commit: 7c6eef3dda32be3ad7634955a7a67db61371111e ("audit-1: consensus
+    reference solution, pairwise RMSE, and validation results").
+  - Implementation in commit 7c6eef3 (src/thermal3d/Verification3D.cpp:485-497):
+      auto extrap_val = [](double fc, double fm, double ff, double r = 1.5, double p_def = 2.0) {
+          double e21 = fm - ff;
+          double e32 = fc - fm;
+          double p = p_def;
+          if (std::abs(e21) > 1e-12 && (e32 * e21 > 0.0)) {
+              double ratio = e32 / e21;
+              p = std::log(ratio) / std::log(r);
+              if (p < 0.5 || p > 4.0) p = p_def;
+          }
+          double rp = std::pow(r, p);
+          double denom = (rp > 1.0001) ? (rp - 1.0) : 1.0;
+          return ff + (ff - fm) / denom;
+      };
+      suite.tmax_extrap_fem = extrap_val(fem_c.T_max, fem_m.T_max, fem_f.T_max); // -> 61.0295
+      suite.tmax_extrap_fdm = extrap_val(fdm_c.T_max, fdm_m.T_max, fdm_f.T_max); // -> 60.3265
+      suite.tmax_extrap_fvm = extrap_val(fvm_c.T_max, fvm_m.T_max, fvm_f.T_max); // -> 60.5567
+      suite.tmax_consensus  = (tmax_extrap_fem + tmax_extrap_fdm + tmax_extrap_fvm) / 3.0; // -> 60.6376
+
+2. Root Cause Analysis & Invalidation:
+--------------------------------------
+  - For the 9-Fin T_max grid series across Coarse, Medium, and Fine levels, the localized
+    Neumann source patch creates steep thermal gradients such that convergence is non-monotonic
+    or |e32| < |e21| (observed order ratio < 1.0, leading to a negative apparent order).
+  - The legacy lambda routine caught this via `if (p < 0.5 || p > 4.0) p = p_def;` and forcibly
+    clamped the convergence rate to an arbitrary default `p = 2.0`.
+  - Evaluating Richardson extrapolation with a clamped p=2.0 on non-monotonic data generated
+    synthetic numbers: 61.0295 °C (FEM), 60.3265 °C (FDM), 60.5567 °C (FVM).
+  - Under ASME V&V 20 and Roache (1998) GCI guidelines, Richardson extrapolation is mathematically
+    invalid unless asymptotic monotonic convergence (0 < e21/e32 < 1) is achieved naturally
+    without clamping, artificial exponent substitution, or sign concealment.
+  - Conclusion: 61.0295, 60.3265, and 60.5567 are non-physical numerical artifacts caused by
+    unphysical order clamping. They are marked unverified and completely removed from all benchmark
+    tables, consensus evaluations, and conclusions. Consensus T_max is correctly reported as
+    UNAVAILABLE / NaN.
+
+3. Report Updates:
+------------------
+  - Added explicit paragraph in Section 6.4 of scripts/make_report_pdf.py explaining the audit
+    and resolution of these disputed legacy values.
+  - Re-compiled PDF (THERMATRIX_ASSIGNMENT_2/Report/THERMATRIX_Round2_Report.pdf).
+
+4. Full Test Suite Execution Log:
+---------------------------------
+Command:
+cmd /c "set PATH=C:\msys64\mingw64\bin;%PATH% && cmake --build build -j4 && ctest --test-dir build --output-on-failure"
+
+ninja: no work to do.
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.02 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.02 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.01 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.01 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.01 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.01 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.41 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   13.56 sec
+
+100% tests passed out of 8
+
+Total Test time (real) =  15.06 sec
+================================================================================

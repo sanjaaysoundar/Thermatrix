@@ -627,7 +627,12 @@ story += [
       "An independent Finer FEM mesh (23.9k nodes) is provided strictly as a separate cross-check (<b>60.8134 °C</b>).<br/>"
       "• <b>T_avg Extrapolation:</b> Only FDM converges monotonically (p=6.42, GCI₂₁=0.00057%) to <b>56.1584 °C</b>. "
       "This is classified strictly as a <b>single-method extrapolation</b>, not a cross-solver consensus, because FEM and FVM volume-weighted averages exhibit sub-tenth-degree non-monotonicity across these three grids. "
-      "The independent Finer FEM cross-check confirms T_avg = 56.5704 °C (diff = 0.412 °C vs FDM).", BODY),
+      "The independent Finer FEM cross-check confirms T_avg = 56.5704 °C (diff = 0.412 °C vs FDM).<br/>"
+      "• <b>Audit and Resolution of Disputed Historical Values (61.0295, 60.3265, 60.5567 °C):</b> A comprehensive Git history audit traced these values directly to commit <code>7c6eef3</code>. "
+      "In that legacy commit, an ad-hoc Richardson extrapolation routine applied an unphysical order clamp (p clamped to [0.5, 4.0] with fallback p=2.0) onto non-monotonic grid triplets (|e32| &lt; |e21|). "
+      "Evaluating that clamped formula yielded synthetic extrapolated values of 61.0295 °C (FEM), 60.3265 °C (FDM), and 60.5567 °C (FVM), and an artificial 'consensus' mean of 60.6376 °C. "
+      "Under ASME V&amp;V 20 standards, Richardson extrapolation is mathematically invalid when asymptotic monotonic convergence is violated. "
+      "These values are definitively established as unphysical clamping artifacts, marked unverified, and completely eliminated from all conclusions.", BODY),
     SP(0.2),
     P("6.5 · FVM Non-Orthogonal Correction Audit &amp; Matrix Diagnostics", H2), hr(),
     P("A comprehensive audit of the FVM formulation across Coarse, Medium, and Fine levels demonstrates matrix symmetry, preconditioner stability, and correction sensitivity:", BODY),
