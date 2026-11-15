@@ -177,19 +177,25 @@ SolverResult FemSolver3D::solve(const FemMesh& mesh,
     result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
     result.n_nnz = A.nnz();
 
-    // Linear Solve: PCG with IC(0)
+    // Linear Solve: PCG with IC(0) / Jacobi or SSOR
     std::vector<double> T(n, T_inf); // initial guess = T_inf
-    auto precond = make_ic0_precond(A);
-
     SolverParams p = lparams;
-    p.rel_tol = 1e-10;
+    if (p.rel_tol <= 0.0) p.rel_tol = 1e-10;
 
     auto t_sol_0 = Clock::now();
-    auto sol_res = pcg_solve(A, b, T, precond, p, "PCG-IC0");
+    LinearSolveResult sol_res;
+    if (p.method == "PCG-Jacobi" || p.method == "Jacobi" || p.method == "jacobi") {
+        auto precond = make_jacobi_precond(A);
+        sol_res = pcg_solve(A, b, T, precond, p, "PCG-Jacobi");
+    } else if (p.method == "SSOR" || p.method == "ssor") {
+        sol_res = ssor_solve(A, b, T, p);
+    } else {
+        auto precond = make_ic0_precond(A);
+        sol_res = pcg_solve(A, b, T, precond, p, "PCG-IC0");
+    }
     auto t_sol_1 = Clock::now();
 
     result.t_solve_ms = std::chrono::duration<double, std::milli>(t_sol_1 - t_sol_0).count();
-    result.t_total_ms = result.t_assemble_ms + result.t_solve_ms;
     result.linear_solver = sol_res.method;
     result.iterations = sol_res.iterations;
     result.final_rel_res = sol_res.final_rel_res;
@@ -197,6 +203,7 @@ SolverResult FemSolver3D::solve(const FemMesh& mesh,
     result.T = T;
 
     // Post-processing & Energy Balance
+    auto t_post_0 = Clock::now();
     double t_min = 1e9, t_max = -1e9, t_sum = 0.0;
     for (double val : T) {
         t_min = std::min(t_min, val);
@@ -229,6 +236,10 @@ SolverResult FemSolver3D::solve(const FemMesh& mesh,
     result.Q_conv = q_conv_sum;
     result.Q_balance_rel = std::abs(q_in_total - q_conv_sum) / q_in_total;
     result.peak_mem_bytes = peak_memory_bytes();
+    auto t_post_1 = Clock::now();
+
+    result.t_post_ms = std::chrono::duration<double, std::milli>(t_post_1 - t_post_0).count();
+    result.t_total_ms = result.t_mesh_ms + result.t_assemble_ms + result.t_solve_ms + result.t_post_ms;
 
     return result;
 }

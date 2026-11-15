@@ -23,9 +23,10 @@ namespace t3d {
 // Solver parameters
 // ---------------------------------------------------------------------------
 struct SolverParams {
-    int    max_iter { 10000 };
-    double rel_tol  { 1e-10 };   ///< ||r||/||b|| stopping tolerance
-    double sor_omega{ 1.5 };     ///< Relaxation factor for SOR/SSOR (1.0 = GS)
+    int         max_iter   { 10000 };
+    double      rel_tol    { 1e-10 };   ///< ||r||/||b|| stopping tolerance
+    double      sor_omega  { 1.5 };     ///< Relaxation factor for SOR/SSOR (1.0 = GS)
+    std::string method     { "PCG-IC0" }; ///< "PCG-IC0", "PCG-Jacobi", "SSOR", "SOR"
 };
 
 // ---------------------------------------------------------------------------

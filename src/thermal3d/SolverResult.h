@@ -41,6 +41,7 @@ struct SolverResult {
     double t_mesh_ms     { 0.0 };   ///< Mesh / grid construction time
     double t_assemble_ms { 0.0 };   ///< Matrix assembly time
     double t_solve_ms    { 0.0 };   ///< Linear solve time
+    double t_post_ms     { 0.0 };   ///< Post-processing time
     double t_total_ms    { 0.0 };   ///< Total time (mesh + assemble + solve + post)
 
     // --- Temperature statistics (°C) ----------------------------------------
@@ -72,6 +73,49 @@ struct SolverResult {
 
     // Returns the CSV header string
     static std::string csv_header();
+};
+
+// ---------------------------------------------------------------------------
+// BenchmarkRunStats  –  multi-run timing statistics (min/median/max)
+// ---------------------------------------------------------------------------
+struct StageStats {
+    double min_ms { 0.0 };
+    double med_ms { 0.0 };
+    double max_ms { 0.0 };
+};
+
+struct BenchmarkRunStats {
+    std::string solver;
+    std::string level;          ///< "Coarse", "Medium", "Fine"
+    std::string case_label;     ///< "A" or "B"
+    int         n_dof      { 0 };
+    int         n_nnz      { 0 };
+    int         n_elements { 0 };
+    std::string linear_solver;
+    int         iterations { 0 };
+    double      rel_tol    { 1e-10 };
+    double      final_rel_res { 0.0 };
+
+    StageStats  t_mesh;
+    StageStats  t_assemble;
+    StageStats  t_solve;
+    StageStats  t_post;
+    StageStats  t_total;
+
+    double      T_min      { 0.0 };
+    double      T_max      { 0.0 };
+    double      T_avg      { 0.0 };
+    double      T_src      { 0.0 };
+
+    double      Q_in       { 0.0 };
+    double      Q_conv     { 0.0 };
+    double      Q_balance_rel { 0.0 };
+
+    std::size_t peak_mem_bytes { 0 };
+    double      peak_mem_mb    { 0.0 };
+
+    static std::string csv_header();
+    std::string to_csv_row() const;
 };
 
 } // namespace t3d

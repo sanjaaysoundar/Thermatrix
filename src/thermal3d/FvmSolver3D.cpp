@@ -257,12 +257,22 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
     result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
     result.n_nnz = A.nnz();
 
-    // 4. Linear Solve: PCG with IC(0)
+    // 4. Linear Solve: PCG with IC(0) / Jacobi or SSOR
     std::vector<double> T(n_cells, T_inf);
-    auto precond = make_ic0_precond(A);
-
     SolverParams p = lparams;
-    p.rel_tol = 1e-10;
+    if (p.rel_tol <= 0.0) p.rel_tol = 1e-10;
+
+    Preconditioner precond;
+    std::string method_name = p.method;
+    if (p.method == "PCG-Jacobi" || p.method == "Jacobi" || p.method == "jacobi") {
+        precond = make_jacobi_precond(A);
+        method_name = "PCG-Jacobi";
+    } else if (p.method == "SSOR" || p.method == "ssor") {
+        method_name = "SSOR";
+    } else {
+        precond = make_ic0_precond(A);
+        method_name = "PCG-IC0";
+    }
 
     auto t_sol_0 = Clock::now();
     // 2 outer deferred-correction iterations for non-orthogonal flux
@@ -294,7 +304,6 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
             for (const auto& bface : boundary_faces) {
                 double T_face = T[bface.cell_P];
                 if (bface.bc_type == BcType::Robin) {
-                    // T_face = (k/d * T_P + h * T_inf) / (k/d + h)
                     T_face = (prob_.k * T[bface.cell_P] + 1e-3 * h_val * T_inf) / (prob_.k + 1e-3 * h_val);
                 }
                 Vec3 out_dir = (bface.center - cell_centers[bface.cell_P]).normalized();
@@ -320,7 +329,12 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
             }
         }
 
-        auto sol_res = pcg_solve(A, b_eff, T, precond, p, "PCG-IC0");
+        LinearSolveResult sol_res;
+        if (method_name == "SSOR") {
+            sol_res = ssor_solve(A, b_eff, T, p);
+        } else {
+            sol_res = pcg_solve(A, b_eff, T, precond, p, method_name);
+        }
         total_iters += sol_res.iterations;
         final_res = sol_res.final_rel_res;
         converged = sol_res.converged;
@@ -328,14 +342,14 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
 
     auto t_sol_1 = Clock::now();
     result.t_solve_ms = std::chrono::duration<double, std::milli>(t_sol_1 - t_sol_0).count();
-    result.t_total_ms = result.t_assemble_ms + result.t_solve_ms;
-    result.linear_solver = "PCG-IC0";
+    result.linear_solver = method_name;
     result.iterations = total_iters;
     result.final_rel_res = final_res;
     result.success = converged;
     result.T = T;
 
     // 5. Post-processing & Energy Balance
+    auto t_post_0 = Clock::now();
     double t_min = 1e9, t_max = -1e9, t_sum = 0.0;
     for (double val : T) {
         t_min = std::min(t_min, val);
@@ -365,6 +379,10 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
     result.Q_conv = q_conv_sum;
     result.Q_balance_rel = std::abs(q_in_total - q_conv_sum) / q_in_total;
     result.peak_mem_bytes = peak_memory_bytes();
+    auto t_post_1 = Clock::now();
+
+    result.t_post_ms = std::chrono::duration<double, std::milli>(t_post_1 - t_post_0).count();
+    result.t_total_ms = result.t_mesh_ms + result.t_assemble_ms + result.t_solve_ms + result.t_post_ms;
 
     return result;
 }
