@@ -75,6 +75,28 @@ if(NOT MSVC)
     target_compile_options(thermatrix_core PRIVATE -fopenmp)
 endif()
 
+# ── Thermal3D library (Phase 1+) ──────────────────────────────────────────────
+set(T3D_SOURCES
+    src/thermal3d/SparseCsr.cpp
+    src/thermal3d/LinearSolvers.cpp
+    src/thermal3d/SolverResult.cpp
+)
+
+add_library(thermatrix_t3d STATIC ${T3D_SOURCES})
+target_include_directories(thermatrix_t3d PUBLIC
+    ${CMAKE_SOURCE_DIR}/src
+)
+target_compile_features(thermatrix_t3d PUBLIC cxx_std_17)
+
+if(NOT MSVC)
+    target_compile_options(thermatrix_t3d PRIVATE -fopenmp)
+endif()
+
+# On Windows link psapi for GetProcessMemoryInfo
+if(WIN32)
+    target_link_libraries(thermatrix_t3d PUBLIC psapi)
+endif()
+
 # ── Main application ──────────────────────────────────────────────────────────
 add_executable(THERMATRIX WIN32
     src/main.cpp
@@ -115,6 +137,12 @@ add_thermatrix_test(test_csv_parser    tests/test_csv_parser.cpp)
 add_thermatrix_test(test_fem_solver    tests/test_fem_solver.cpp)
 add_thermatrix_test(test_backprop      tests/test_backprop.cpp)
 add_thermatrix_test(test_benchmark     tests/test_benchmark.cpp)
+
+# ── Thermal3D tests ───────────────────────────────────────────────────────────
+add_executable(test_t3d_linalg tests/test_t3d_linalg.cpp)
+target_include_directories(test_t3d_linalg PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_t3d_linalg PRIVATE thermatrix_t3d)
+add_test(NAME test_t3d_linalg COMMAND test_t3d_linalg)
 
 # ── Copy data files to binary dir ─────────────────────────────────────────────
 add_custom_command(TARGET THERMATRIX POST_BUILD
