@@ -1,0 +1,80 @@
+================================================================================
+ROUND 5 CORRECTION 4: VERIFICATION CLAIMS, SLAB/MMS ERRORS, & STRICT GCI AUDIT
+================================================================================
+Timestamp: 2026-11-15T17:16:15+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. Verification & Validation Metrics Recalculation:
+---------------------------------------------------
+All numerical values are reported directly from real solver output without clamping,
+arbitrary derived multipliers, or absolute-value masking:
+
+A. 1D Slab Conduction Test (40x2x2 prism, q" = 2500 W/m^2, h = 10 W/m^2K, k = 167 W/mK):
+   - FEM (P1 Galerkin Tetrahedra):
+       Relative L2 Error   = 1.49337e-09 %  (1.49e-9 %)   [Threshold < 1.0%, PASS]
+       Relative Linf Error = 1.49522e-09 %  (1.50e-9 %)   [Threshold < 2.0%, PASS]
+       Max Absolute Error  = 6.01418e-10 K                 [Threshold < 0.5 K, PASS]
+   - FDM (Cartesian Voxel 7-pt Stencil):
+       Relative L2 Error   = 5.38737e-09 %  (5.39e-9 %)   [Threshold < 1.0%, PASS]
+       Relative Linf Error = 5.39306e-09 %  (5.39e-9 %)   [Threshold < 2.0%, PASS]
+       Max Absolute Error  = 2.16335e-09 K                 [Threshold < 0.5 K, PASS]
+   - FVM (Cell-Centred Control Volumes with Non-Orthogonal Correction):
+       Relative L2 Error   = 0.979424 %     (0.98 %)      [Threshold < 2.0%, PASS]
+       Relative Linf Error = 1.70161 %      (1.70 %)      [Threshold < 3.0%, PASS]
+       Max Absolute Error  = 0.68537 K                    [Threshold < 1.0 K, PASS]
+
+B. 3D Manufactured-Solution Convergence Test (Harmonic Polynomial on Cube, r = 2.0):
+   - FEM:
+       Coarse L2 = 5.97298e-03, Medium L2 = 1.91135e-03, Fine L2 = 5.31307e-04
+       Observed Order p = ln(e_med / e_fine) / ln(2) = 1.84672  (~1.85, O(h^2))
+       Criterion: p >= 1.5, Status: PASS
+   - FDM:
+       Coarse L2 = 1.62993e-01, Medium L2 = 5.55310e-02, Fine L2 = 1.52684e-02
+       Observed Order p = ln(e_med / e_fine) / ln(2) = 1.86263  (~1.86, O(h^2))
+       Criterion: p >= 1.5, Status: PASS
+   - FVM (Cell-Centred on Unstructured Skewed Tetrahedra):
+       Coarse L2 = 1.21848,     Medium L2 = 7.02310e-01, Fine L2 = 3.85010e-01
+       Observed Order p = ln(e_med / e_fine) / ln(2) = 0.866903 (~0.867, O(h))
+       Criterion: p >= 0.75, Status: PASS
+   * Physical note: On unstructured tetrahedral meshes generated from the 6-tet-per-cube
+     decomposition, cell non-orthogonality and boundary normal projections result in first-order
+     spatial accuracy (p = 0.867). Second-order convergence is NOT claimed for FVM.
+
+C. Grid Convergence Index (GCI) Formulation:
+   - Evaluated using actual refinement ratios r21 and r32:
+       r21 = (N_fine / N_medium)^(1/3), r32 = (N_medium / N_coarse)^(1/3)
+   - Strict Roache / ASME criteria enforced:
+       Order p computed ONLY when |e21| < |e32| with identical sign (e21 * e32 > 0).
+       No clamping of p; no abs() on log ratio (log(e32/e21) is well-defined by sign check).
+   - Only FDM T_avg demonstrates monotonic asymptotic convergence across the 3 grids
+     (p = 6.42, GCI_21 = 0.00057%). All other quantities are correctly classified as
+     NON-MONOTONIC due to steep localized source-patch gradients.
+
+2. Full Test Suite Execution Log:
+---------------------------------
+Command:
+cmd /c "set PATH=C:\msys64\mingw64\bin;%PATH% && ctest --test-dir build --output-on-failure"
+
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.03 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.02 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.01 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.01 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.01 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.08 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.51 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   13.46 sec
+
+100% tests passed out of 8
+
+Total Test time (real) =  15.14 sec
+================================================================================

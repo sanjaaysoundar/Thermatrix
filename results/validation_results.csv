@@ -27,7 +27,7 @@ MMS_Linf_Error,Actual_Linf_Error,FDM,0.3467,0.14165,0.0410957,0.0,1.86263 (order
 MMS_Linf_Error,Actual_Linf_Error,FVM,3.45879,2.13213,1.20519,0.0,0.866903 (order),p >= 0.75,PASS
 MMS_Order,Observed_Order_p,FEM,1.84672,,,2.0,1.84672,p >= 1.5,PASS
 MMS_Order,Observed_Order_p,FDM,1.86263,,,2.0,1.86263,p >= 1.5,PASS
-MMS_Order,Observed_Order_p,FVM,0.866903,,,2.0,0.866903,p >= 0.75,PASS
+MMS_Order,Observed_Order_p,FVM,0.866903,,,1.0,0.866903,p >= 0.75,PASS
 GCI,T_max,FEM,60.5102,60.581,60.8302,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC
 GCI,T_avg,FEM,56.5685,56.5692,56.57,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC
 GCI,T_max,FDM,59.8088,60.4034,60.3607,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC

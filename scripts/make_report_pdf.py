@@ -301,7 +301,8 @@ story += [
       "isolated single-process runs (1 warm-up + 5 measured runs). "
       "All results come from actual execution; no number is invented or estimated. "
       "The maximum energy balance error across all 33 runs is 7.56×10⁻¹¹ (relative). "
-      "Verification confirms second-order spatial convergence for all three methods.", BODY),
+      "Verification confirms second-order spatial convergence for FEM (p=1.85) and FDM (p=1.86), "
+      "while cell-centred FVM achieves first-order spatial convergence (p=0.87) on unstructured skewed tetrahedral meshes.", BODY),
     SP(0.3),
     P("<b>Keywords.</b> Finite Element Method, Finite Difference Method, Finite Volume Method, "
       "Steady-state heat conduction, PCG-IC0, Mesh convergence, Grid Convergence Index, "

@@ -1215,7 +1215,7 @@ bool VerificationSuiteResult::export_csv(const std::string& filepath) const {
     out << "MMS_Linf_Error,Actual_Linf_Error,FVM," << mms_linf1_fvm << "," << mms_linf2_fvm << "," << mms_linf3_fvm << ",0.0," << mms_order_fvm << " (order),p >= 0.75," << mms_fvm_status << "\n";
     out << "MMS_Order,Observed_Order_p,FEM," << mms_order_fem << ",,,2.0," << mms_order_fem << ",p >= 1.5," << mms_fem_status << "\n";
     out << "MMS_Order,Observed_Order_p,FDM," << mms_order_fdm << ",,,2.0," << mms_order_fdm << ",p >= 1.5," << mms_fdm_status << "\n";
-    out << "MMS_Order,Observed_Order_p,FVM," << mms_order_fvm << ",,,2.0," << mms_order_fvm << ",p >= 0.75," << mms_fvm_status << "\n";
+    out << "MMS_Order,Observed_Order_p,FVM," << mms_order_fvm << ",,,1.0," << mms_order_fvm << ",p >= 0.75," << mms_fvm_status << "\n";
 
     // 6. GCI Results
     for (const auto& g : gci_results) {
