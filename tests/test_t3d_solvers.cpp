@@ -121,6 +121,17 @@ void test_fvm_solve() {
     ASSERT_TRUE(rA.T_min >= 25.0, "FVM T_min >= T_inf (25 °C)");
     ASSERT_TRUE(rA.Q_balance_rel < 0.01, "FVM Case A energy balance error < 1% (exact conservation)");
 
+    MeshQualityStats stats = solver.last_quality_stats();
+    std::cout << "  FVM Mesh Quality Telemetry:\n"
+              << "    Internal faces: " << stats.n_internal_faces << "\n"
+              << "    Boundary faces: " << stats.n_boundary_faces << "\n"
+              << "    Non-orthogonality angle: min=" << stats.min_non_ortho_deg
+              << " deg, max=" << stats.max_non_ortho_deg
+              << " deg, mean=" << stats.mean_non_ortho_deg << " deg\n";
+
+    ASSERT_TRUE(stats.max_non_ortho_deg > 0.0, "Tetrahedral mesh exhibits non-orthogonality");
+    ASSERT_TRUE(stats.mean_non_ortho_deg < 60.0, "Mean non-orthogonality angle is acceptable (< 60 deg)");
+
     SolverResult rB = solver.solve(ConvCase::B, MeshResolution::Coarse);
     ASSERT_TRUE(rB.success, "FVM solve Case B succeeds");
     ASSERT_TRUE(rB.T_max < rA.T_max, "FVM: Case B peak temperature < Case A");
@@ -138,13 +149,24 @@ void test_cross_solver_consistency() {
     SolverResult r_fvm = fvm.solve(ConvCase::A, MeshResolution::Coarse);
 
     std::cout << "\nCross-Solver Comparison (Case A, Coarse):\n"
-              << "  FEM: T_min=" << r_fem.T_min << " C, T_max=" << r_fem.T_max << " C, T_avg=" << r_fem.T_avg << " C\n"
-              << "  FDM: T_min=" << r_fdm.T_min << " C, T_max=" << r_fdm.T_max << " C, T_avg=" << r_fdm.T_avg << " C\n"
-              << "  FVM: T_min=" << r_fvm.T_min << " C, T_max=" << r_fvm.T_max << " C, T_avg=" << r_fvm.T_avg << " C\n\n";
+              << "  FEM: DOF=" << r_fem.n_dof << ", NNZ=" << r_fem.n_nnz << ", T_min=" << r_fem.T_min << " C, T_max=" << r_fem.T_max << " C, T_avg=" << r_fem.T_avg << " C\n"
+              << "  FDM: DOF=" << r_fdm.n_dof << ", NNZ=" << r_fdm.n_nnz << ", T_min=" << r_fdm.T_min << " C, T_max=" << r_fdm.T_max << " C, T_avg=" << r_fdm.T_avg << " C\n"
+              << "  FVM: DOF=" << r_fvm.n_dof << ", NNZ=" << r_fvm.n_nnz << ", T_min=" << r_fvm.T_min << " C, T_max=" << r_fvm.T_max << " C, T_avg=" << r_fvm.T_avg << " C\n\n";
+
+    // 1. Assert FDM and FVM matrices are NOT identical
+    ASSERT_TRUE(r_fdm.n_dof != r_fvm.n_dof, "FDM and FVM DOFs are NOT identical (distinct grid vs mesh)");
+    ASSERT_TRUE(r_fdm.n_nnz != r_fvm.n_nnz, "FDM and FVM NNZs are NOT identical");
+    ASSERT_TRUE(r_fem.n_dof != r_fvm.n_dof, "FEM (nodes) and FVM (tets) DOFs are NOT identical");
+
+    // 2. Assert FEM and FVM operate on the SAME mesh
+    HeatSinkGeometry geom;
+    FemMesh shared_mesh = generate_fem_mesh(geom, MeshResolution::Coarse);
+    ASSERT_TRUE(r_fem.n_dof == shared_mesh.n_nodes(), "FEM DOF matches shared mesh node count");
+    ASSERT_TRUE(r_fvm.n_dof == shared_mesh.n_elements(), "FVM DOF matches shared mesh tetrahedral element count");
 
     // Mean temperatures should be close across all 3 discretizations
-    ASSERT_NEAR(r_fdm.T_avg, r_fvm.T_avg, 2.0, "FDM and FVM average temperatures within 2.0 °C");
-    ASSERT_NEAR(r_fem.T_avg, r_fvm.T_avg, 4.0, "FEM and FVM average temperatures within 4.0 °C");
+    ASSERT_NEAR(r_fdm.T_avg, r_fvm.T_avg, 3.0, "FDM and FVM average temperatures within 3.0 °C");
+    ASSERT_NEAR(r_fem.T_avg, r_fvm.T_avg, 3.0, "FEM and FVM average temperatures within 3.0 °C");
 }
 
 int main() {
