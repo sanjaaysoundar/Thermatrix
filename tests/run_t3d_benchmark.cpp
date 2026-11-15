@@ -292,6 +292,7 @@ int main(int argc, char* argv[]) {
     stats.T_min = last_res.T_min;
     stats.T_max = last_res.T_max;
     stats.T_avg = last_res.T_avg;
+    stats.T_avg_raw = last_res.T_avg_raw;
     stats.T_src = last_res.T_src;
 
     stats.Q_in = last_res.Q_in;

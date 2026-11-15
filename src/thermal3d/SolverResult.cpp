@@ -167,6 +167,7 @@ std::string BenchmarkRunStats::to_csv_row() const {
        << fixd(T_min, 4) << ","
        << fixd(T_max, 4) << ","
        << fixd(T_avg, 4) << ","
+       << fixd(T_avg_raw, 4) << ","
        << fixd(T_src, 4) << ","
        << fixd(Q_in, 6) << ","
        << fixd(Q_conv, 6) << ","

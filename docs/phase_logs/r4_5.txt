@@ -1,0 +1,24 @@
+r4-5: Volume-weighted T_avg in all solvers and 33 benchmark runs
+=================================================================
+
+Volume-weighted T_avg computation:
+- FEM: T_avg = sum(elem_T * V_e) / sum(V_e) where elem_T = mean of 4 nodal T
+  (FemSolver3D.cpp line 217-226)
+- FDM: T_avg = arithmetic mean (uniform grid => volume-weighted == arithmetic)
+  (FdmSolver3D.cpp line 146-147, documented)
+- FVM: T_avg = sum(T[e] * V_e) / sum(V_e) over all tet cells
+  (FvmSolver3D.cpp line 366-374)
+
+T_avg_raw (unweighted arithmetic mean) kept in separate column for comparison.
+
+BenchmarkRunStats::to_csv_row() updated to include T_avg_raw_C column.
+run_t3d_benchmark.cpp updated to wire stats.T_avg_raw = last_res.T_avg_raw.
+
+All 33 benchmark runs completed via scripts/run_complexity_study.py.
+Results written to:
+  results/complexity_study.csv
+  results/benchmark_results.csv
+  THERMATRIX_ASSIGNMENT_2/Results/complexity_study.csv
+  THERMATRIX_ASSIGNMENT_2/Results/benchmark_results.csv
+
+All 8 ctest tests pass (100%).
