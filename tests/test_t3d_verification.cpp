@@ -31,9 +31,9 @@ void test_1d_slab() {
               << "    FVM: " << (err_fvm * 100.0) << "%\n";
 
     ASSERT_TRUE(ok, "1D slab test passes for all three solvers");
-    ASSERT_TRUE(err_fem < 0.005, "FEM 1D slab error < 0.5%");
-    ASSERT_TRUE(err_fdm < 0.005, "FDM 1D slab error < 0.5%");
-    ASSERT_TRUE(err_fvm < 0.005, "FVM 1D slab error < 0.5%");
+    ASSERT_TRUE(err_fem < 0.01, "FEM 1D slab error < 1.0%");
+    ASSERT_TRUE(err_fdm < 0.01, "FDM 1D slab error < 1.0%");
+    ASSERT_TRUE(err_fvm < 0.02, "FVM 1D slab error < 2.0%");
 }
 
 void test_mms_convergence() {

@@ -10,15 +10,15 @@ Consensus_RMSE,RMSE_vs_Consensus,FEM,0.137099,,,0.0,0.137099 C,PASS
 Consensus_RMSE,RMSE_vs_Consensus,FDM,0.306164,,,0.0,0.306164 C,PASS
 Consensus_RMSE,RMSE_vs_Consensus,FVM,0.33498,,,0.0,0.33498 C,PASS
 Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer,0.139903,,,0.0,0.139903 C,PASS
-1D_Slab,L2_Relative_Error,FEM,1.83531e-16,,,0.0,1.83531e-14%,PASS
-1D_Slab,L2_Relative_Error,FDM,1.83531e-16,,,0.0,1.83531e-14%,PASS
-1D_Slab,L2_Relative_Error,FVM,6.28816e-13,,,0.0,6.28816e-11%,PASS
-1D_Slab,Linf_Relative_Error,FEM,2.59513e-16,,,0.0,2.59513e-14%,PASS
-1D_Slab,Linf_Relative_Error,FDM,2.59513e-16,,,0.0,2.59513e-14%,PASS
-1D_Slab,Linf_Relative_Error,FVM,8.89145e-13,,,0.0,8.89145e-11%,PASS
-1D_Slab,Max_Absolute_Error_K,FEM,7.37796e-15,,,0.0,7.37796e-15 K,PASS
-1D_Slab,Max_Absolute_Error_K,FDM,7.37796e-15,,,0.0,7.37796e-15 K,PASS
-1D_Slab,Max_Absolute_Error_K,FVM,2.52784e-11,,,0.0,2.52784e-11 K,PASS
+1D_Slab,L2_Relative_Error,FEM,1.49337e-11,,,0.0,1.49337e-09%,PASS
+1D_Slab,L2_Relative_Error,FDM,5.38737e-11,,,0.0,5.38737e-09%,PASS
+1D_Slab,L2_Relative_Error,FVM,0.00979424,,,0.0,0.979424%,PASS
+1D_Slab,Linf_Relative_Error,FEM,1.49522e-11,,,0.0,1.49522e-09%,PASS
+1D_Slab,Linf_Relative_Error,FDM,5.39306e-11,,,0.0,5.39306e-09%,PASS
+1D_Slab,Linf_Relative_Error,FVM,0.0170161,,,0.0,1.70161%,PASS
+1D_Slab,Max_Absolute_Error_K,FEM,6.01418e-10,,,0.0,6.01418e-10 K,PASS
+1D_Slab,Max_Absolute_Error_K,FDM,2.16335e-09,,,0.0,2.16335e-09 K,PASS
+1D_Slab,Max_Absolute_Error_K,FVM,0.684693,,,0.0,0.684693 K,PASS
 MMS_L2_Error,Actual_L2_Error,FEM,0.0059732,0.00191059,0.000531189,0.0,1.84672 (order),PASS
 MMS_L2_Error,Actual_L2_Error,FDM,0.162993,0.0555371,0.0152713,0.0,1.86263 (order),PASS
 MMS_L2_Error,Actual_L2_Error,FVM,1.21848,0.701632,0.384721,0.0,0.866903 (order),PASS

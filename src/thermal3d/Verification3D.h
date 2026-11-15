@@ -124,8 +124,9 @@ public:
     // Run complete verification suite and export CSV
     VerificationSuiteResult run_full_verification(const std::string& out_csv = "");
 
-    // 1D Slab Test versus exact analytical solution
+    // 1D Slab Test versus exact analytical solution (runs real 3D solvers on prism)
     bool run_1d_slab_test(double& err_fem, double& err_fdm, double& err_fvm);
+    bool run_1d_slab_test(VerificationSuiteResult& suite);
 
     // 3D Box Manufactured Solution test returning observed order
     bool run_mms_test(double& order_fem, double& order_fdm, double& order_fvm);
