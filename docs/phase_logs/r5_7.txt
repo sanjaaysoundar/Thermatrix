@@ -1,0 +1,76 @@
+================================================================================
+ROUND 5 CORRECTION 7: ENERGY BALANCE AND TIMING RECONCILIATION
+================================================================================
+Timestamp: 2026-11-15T17:36:30+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. Energy Balance Reconciliation:
+---------------------------------
+Audited all 33 benchmark rows in results/benchmark_results.csv:
+  - Global maximum relative energy conservation error across all 33 runs: 7.5602e-11
+    (Occurs in FDM Cube Fine Case A).
+  - Fine 9-Fin Heat Sink Case A:
+      * FEM: 5.21e-13 (machine precision, weak Galerkin formulation)
+      * FDM: 2.52e-12 (staircase ghost-node Robin boundary flux)
+      * FVM: 2.87e-14 (strict cell-centred local face flux conservation)
+  - Updated all report locations (Executive Summary, Table 11.1, Section 12 text,
+    and Figure 14 caption) from outdated claims (< 2.6e-11 or < 1e-13) to:
+    "maximum recorded relative error of 7.5602×10⁻¹¹ (FEM and FVM achieve machine precision < 6.0×10⁻¹³)".
+
+2. Min / Median / Max Timing Statistics:
+----------------------------------------
+Populated full min / median / max timing statistics in Table 9.1 and Table 11.1:
+  - Mesh / Grid Generation:
+      * FEM: 146.6 / 146.6 / 146.6 ms
+      * FDM: 84.6 / 84.6 / 84.6 ms
+      * FVM: 131.9 / 131.9 / 131.9 ms
+  - Matrix Assembly:
+      * FEM: 55.4 / 58.4 / 59.8 ms
+      * FDM: 723.4 / 749.8 / 858.5 ms
+      * FVM: 61.2 / 70.3 / 172.5 ms
+  - Linear Solver (PCG-IC0):
+      * FEM: 49.8 / 52.5 / 57.4 ms
+      * FDM: 16,201.3 / 17,846.6 / 18,581.4 ms
+      * FVM: 817.6 / 2,552.5 / 3,041.7 ms
+  - Total Wall Time:
+      * FEM: 251.9 / 256.4 / 262.6 ms (1.0× baseline)
+      * FDM: 17,043.2 / 18,656.3 / 19,526.3 ms (72.8× FEM)
+      * FVM: 1,020.2 / 2,745.8 / 3,346.4 ms (10.7× FEM)
+
+3. Fin-Sweep Runtime Prose Reconciliation:
+------------------------------------------
+Reconciled prose in Section 8 (Figure 8 caption and analysis) with results/complexity_study.csv:
+  - 3 Fins: FEM 51.2 ms | FDM 778.1 ms | FVM 91.2 ms
+  - 5 Fins: FEM 76.8 ms | FDM 2,125.0 ms | FVM 182.4 ms
+  - 9 Fins: FEM 107.5 ms | FDM 3,017.4 ms | FVM 297.5 ms
+Outdated prose stating "738 ms to 1523 ms" has been corrected to "778.1 ms (3 fins) to 2,125.0 ms (5 fins) and 3,017.4 ms (9 fins)".
+
+4. Full Test Suite Execution Log:
+---------------------------------
+Command:
+cmd /c "set PATH=C:\msys64\mingw64\bin;%PATH% && cmake --build build -j4 && ctest --test-dir build --output-on-failure"
+
+ninja: no work to do.
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.02 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.02 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.01 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.01 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.01 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.01 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.44 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   13.86 sec
+
+100% tests passed out of 8
+
+Total Test time (real) =  15.39 sec
+================================================================================

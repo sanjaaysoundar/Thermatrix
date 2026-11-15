@@ -671,8 +671,8 @@ story += [
     SP(0.3),
     P("<b>Summary of Verification Findings:</b> All three numerical methods satisfy rigorous verification standards. "
       "Spatial convergence rates confirm second-order accuracy for FEM (p=1.85) and FDM (p=1.86), while FVM achieves p=0.87 "
-      "reflecting the first-order boundary discretization on skewed unstructured tets. Probe RMSEs remain below 0.32 °C across all solvers, "
-      "and energy balance is satisfied to machine precision (< 10⁻¹³ relative error).", BODY),
+      "reflecting the first-order boundary discretization on skewed unstructured tets. Pairwise probe RMSEs remain below 0.55 °C across all solver pairs, "
+      "and energy balance is satisfied across all solvers with a maximum recorded relative error of 7.5602×10⁻¹¹ (FEM and FVM achieve machine precision < 6.0×10⁻¹³).", BODY),
     PageBreak(),
 ]
 
@@ -781,7 +781,9 @@ story += [
     SP(0.2),
     P("<b>Thermal Engineering Insights:</b> Adding fins dramatically expands the exposed convective surface area: "
       "going from 3 to 9 fins reduces peak operating temperature by 42.6 °C (from 103.2 °C down to 60.6 °C). "
-      "FDM runtime escalates from 738 ms to 1523 ms as more solid cells populate the domain.", BODY),
+      "Computationally, FDM median runtime escalates from 778.1 ms (3 fins) to 2,125.0 ms (5 fins) and 3,017.4 ms (9 fins) "
+      "as solid voxel count expands from 86.8k to 145.1k cells. In contrast, FEM scales gracefully from 51.2 ms to 107.5 ms, "
+      "and FVM scales from 91.2 ms to 297.5 ms, demonstrating the dramatic efficiency of boundary-conforming meshes on complex shapes.", BODY),
     PageBreak(),
 ]
 
@@ -861,10 +863,10 @@ perf_data = [
     ["Degrees of Freedom (DOF)", "11,799", "487,620 (41× FEM)", "36,671 (3.1× FEM)"],
     ["Matrix Non-Zeros (NNZ)", "131,095", "3,246,444 (25× FEM)", "160,997 (1.2× FEM)"],
     ["PCG-IC(0) Iterations", "174 iterations", "684 iterations", "1,288 iterations"],
-    ["Mesh / Grid Generation Time", "146.6 ms", "64.2 ms", "133.6 ms"],
-    ["Matrix Assembly Time", "53.9 ms", "352.0 ms", "60.8 ms"],
-    ["Linear Solver Time", "47.9 ms", "8,138.4 ms (170× FEM)", "801.5 ms (17× FEM)"],
-    ["Total Wall Time (Median)", "248.4 ms", "8,554.8 ms (34× FEM)", "997.3 ms (4× FEM)"],
+    ["Mesh Gen (min / med / max)", "146.6 / 146.6 / 146.6 ms", "84.6 / 84.6 / 84.6 ms", "131.9 / 131.9 / 131.9 ms"],
+    ["Assembly (min / med / max)", "55.4 / 58.4 / 59.8 ms", "723.4 / 749.8 / 858.5 ms", "61.2 / 70.3 / 172.5 ms"],
+    ["Solver (min / med / max)", "49.8 / 52.5 / 57.4 ms", "16,201.3 / 17,846.6 / 18,581.4 ms", "817.6 / 2,552.5 / 3,041.7 ms"],
+    ["Total Wall Time (min / med / max)", "251.9 / 256.4 / 262.6 ms", "17,043.2 / 18,656.3 / 19,526.3 ms (73×)", "1,020.2 / 2,745.8 / 3,346.4 ms (10.7×)"],
     ["Peak Memory Working Set", "24.5 MB", "320.5 MB (13× FEM)", "35.5 MB (1.4× FEM)"],
     ["Peak Temperature T_max", "60.83 °C", "60.36 °C", "61.23 °C"],
     ["Volume-Weighted T_avg (vol)", "56.57 °C", "56.16 °C", "56.61 °C"],
@@ -876,9 +878,9 @@ story += [
     SP(0.3),
     P("<b>Architectural Efficiency Analysis:</b> FEM emerges as the clear winner in computational efficiency: "
       "its unstructured tetrahedral mesh places DOFs precisely where thermal gradients are steepest, requiring only 11.8k DOFs "
-      "to achieve sub-tenth-degree accuracy. FDM is severely penalised by Cartesian voxelisation on the tapered geometry, "
-      "requiring nearly half a million DOFs and 34× longer wall time. FVM offers geometric fidelity comparable to FEM "
-      "at 4× runtime, with deferred non-orthogonal correction increasing PCG iteration counts.", BODY),
+      "to achieve sub-tenth-degree accuracy with 256.4 ms median runtime. FDM is severely penalised by Cartesian voxelisation on the tapered geometry, "
+      "requiring nearly half a million DOFs and 72.8× longer wall time (18,656.3 ms median). FVM offers geometric fidelity comparable to FEM "
+      "at 10.7× runtime (2,745.8 ms median), with deferred non-orthogonal correction increasing PCG iteration counts.", BODY),
     PageBreak(),
 ]
 
@@ -929,11 +931,11 @@ disc_data = [
     ["Volume-Weighted T_avg", "56.57 °C (Ref)", "56.16 °C (−0.41 °C)", "56.61 °C (+0.04 °C)"],
     ["Unweighted T_avg (raw)", "56.45 °C", "56.16 °C", "56.51 °C"],
     ["Peak temperature T_max", "60.83 °C (Ref)", "60.36 °C (−0.47 °C)", "61.23 °C (+0.40 °C)"],
-    ["Total wall runtime", "248.4 ms (1.0×)", "8,554.8 ms (34.4×)", "997.3 ms (4.0×)"],
+    ["Total wall runtime", "256.4 ms (1.0×)", "18,656.3 ms (72.8×)", "2,745.8 ms (10.7×)"],
     ["Peak process memory", "24.5 MB (1.0×)", "320.5 MB (13.1×)", "35.5 MB (1.4×)"],
     ["Observed convergence order", "p = 1.85 (O(h²))", "p = 1.86 (O(h²))", "p = 0.87 (O(h) tets)"],
     ["PCG iterations (Fine)", "174", "684", "1,288"],
-    ["Energy conservation error", "< 6.0 × 10⁻¹³", "< 2.6 × 10⁻¹¹", "< 3.5 × 10⁻¹³"],
+    ["Energy conservation error", "< 6.0 × 10⁻¹³", "< 7.56 × 10⁻¹¹", "< 3.5 × 10⁻¹³"],
     ["Implementation complexity", "High (weak integrals)", "Low (stencil / voxel)", "High (non-ortho corr.)"],
 ]
 story += [
@@ -941,13 +943,14 @@ story += [
     SP(0.2),
     P("11.2 · Final Engineering Conclusions", H2), hr(),
     P("1. <b>FEM is the optimal choice for thermal heat sink analysis:</b> Conforming P1 tetrahedral elements capture the tapered "
-      "geometry exactly with 41× fewer DOFs than FDM, achieving the fastest runtime (248 ms) and smallest memory footprint (24.5 MB).", BODY_L),
+      "geometry exactly with 41× fewer DOFs than FDM, achieving the fastest runtime (256.4 ms) and smallest memory footprint (24.5 MB).", BODY_L),
     P("2. <b>FVM provides rigorous local conservation on unstructured grids:</b> Cell-centred FVM achieves machine-level energy balance "
-      "(3.5×10⁻¹⁴) on the identical mesh as FEM. Non-orthogonal face angles increase iteration counts, but total runtime remains sub-second.", BODY_L),
+      "(3.5×10⁻¹⁴) on the identical mesh as FEM. Non-orthogonal face angles increase iteration counts, with sub-3-second total runtime (2,745.8 ms).", BODY_L),
     P("3. <b>FDM suffers a severe geometric penalty on tapered geometries:</b> While simple to code, Cartesian voxelisation requires massive "
-      "grid over-refinement (487k cells) to resolve 1.2 mm fin tips, incurring 34× higher computational cost and a slight ~0.5 °C cold bias.", BODY_L),
-    P("4. <b>Verification confirms production-grade fidelity:</b> Real 3D manufactured-solution convergence orders (FEM p=1.85, FDM p=1.86, FVM p=0.87), probe RMSE (<0.32 °C vs consensus), "
-      "and GCI indices prove that THERMATRIX provides rigorous, mesh-independent thermal predictive capability.", BODY_L),
+      "grid over-refinement (487k cells) to resolve 1.2 mm fin tips, incurring 72.8× higher computational cost (18.66 s) and a slight ~0.4 °C cold bias.", BODY_L),
+    P("4. <b>Verification confirms production-grade fidelity:</b> Real 3D manufactured-solution convergence orders (FEM p=1.85, FDM p=1.86, FVM p=0.87), "
+      "pairwise probe RMSE (<0.55 °C across all solver pairs), and maximum energy balance error bounded at 7.5602×10⁻¹¹ "
+      "prove that THERMATRIX provides rigorous, mesh-independent thermal predictive capability.", BODY_L),
     PageBreak(),
 ]
 
@@ -1017,7 +1020,8 @@ story += fig(VIZ/"Benchmark_Charts"/"energy_balance_error.png", width=15.5*cm, m
 story += [
     SP(0.3),
     P("<b>Conservation Conclusion:</b> FEM and FVM achieve machine-precision energy conservation (relative error ≈ 10⁻¹³ to 10⁻¹⁴). "
-      "FDM achieves relative energy balance error below 2.6×10⁻¹¹, demonstrating that the ghost-node Robin boundary conditions "
+      "FDM achieves relative energy balance error below 7.5602×10⁻¹¹ across all 33 benchmark runs (specifically 7.5602×10⁻¹¹ for Cube Fine Case A, "
+      "and 2.52×10⁻¹² for 9-Fin Fine Case A), demonstrating that the ghost-node Robin boundary conditions "
       "correctly account for heat flux through staircase boundaries.", BODY),
 ]
 
