@@ -56,6 +56,7 @@ struct GciResult {
     double gci_21_pct { 0.0 };
     double gci_32_pct { 0.0 };
     double asymptotic_ratio { 0.0 };
+    bool   is_monotonic { true };
 };
 
 struct VerificationSuiteResult {

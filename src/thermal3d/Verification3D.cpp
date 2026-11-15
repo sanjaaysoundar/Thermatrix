@@ -202,15 +202,25 @@ GciResult Verification3D::compute_gci(const std::string& solver, const std::stri
     res.val_medium = f_medium;
     res.val_fine   = f_fine;
 
-    double e21 = f_medium - f_fine;
-    double e32 = f_coarse - f_medium;
+    double e21 = f_fine - f_medium;
+    double e32 = f_medium - f_coarse;
 
-    double ratio = (std::abs(e21) > 1e-12) ? (e32 / e21) : 1.0;
-    double p = 1.0;
-    if (ratio > 0.0) {
-        p = std::abs(std::log(ratio) / std::log(r));
-        p = std::max(0.5, std::min(4.0, p));
+    if (e21 * e32 <= 0.0 || std::abs(e21) < 1e-12) {
+        // Non-monotonic convergence: asymptotic range NOT reached
+        res.is_monotonic = false;
+        res.observed_p = -1.0; // N/A
+        res.val_extrap = f_fine;
+        double denom = (r > 1.05) ? (r - 1.0) : 0.05;
+        res.gci_21_pct = (1.25 * std::abs((f_fine - f_medium) / f_fine) / denom) * 100.0;
+        res.gci_32_pct = (1.25 * std::abs((f_medium - f_coarse) / f_medium) / denom) * 100.0;
+        res.asymptotic_ratio = 0.0;
+        return res;
     }
+
+    res.is_monotonic = true;
+    double ratio = e32 / e21;
+    double p = std::abs(std::log(ratio) / std::log(r));
+    p = std::max(0.5, std::min(4.0, p));
     res.observed_p = p;
 
     double rp = std::pow(r, p);
@@ -473,13 +483,17 @@ VerificationSuiteResult Verification3D::run_full_verification(const std::string&
         fem_finer = fem.solve(mesh_finer, ConvCase::A);
     }
 
-    // 4. Richardson Extrapolation & GCI for T_max and T_avg
-    suite.gci_results.push_back(compute_gci("FEM", "T_max", fem_c.T_max, fem_m.T_max, fem_f.T_max));
-    suite.gci_results.push_back(compute_gci("FEM", "T_avg", fem_c.T_avg, fem_m.T_avg, fem_f.T_avg));
-    suite.gci_results.push_back(compute_gci("FDM", "T_max", fdm_c.T_max, fdm_m.T_max, fdm_f.T_max));
-    suite.gci_results.push_back(compute_gci("FDM", "T_avg", fdm_c.T_avg, fdm_m.T_avg, fdm_f.T_avg));
-    suite.gci_results.push_back(compute_gci("FVM", "T_max", fvm_c.T_max, fvm_m.T_max, fvm_f.T_max));
-    suite.gci_results.push_back(compute_gci("FVM", "T_avg", fvm_c.T_avg, fvm_m.T_avg, fvm_f.T_avg));
+    // 4. Richardson Extrapolation & GCI for T_max and T_avg with effective refinement ratio r = (N_fine/N_coarse)^(1/3)
+    double r_fem = std::cbrt(static_cast<double>(fem_f.n_dof) / static_cast<double>(fem_c.n_dof));
+    double r_fdm = std::cbrt(static_cast<double>(fdm_f.n_dof) / static_cast<double>(fdm_c.n_dof));
+    double r_fvm = std::cbrt(static_cast<double>(fvm_f.n_dof) / static_cast<double>(fvm_c.n_dof));
+
+    suite.gci_results.push_back(compute_gci("FEM", "T_max", fem_c.T_max, fem_m.T_max, fem_f.T_max, r_fem));
+    suite.gci_results.push_back(compute_gci("FEM", "T_avg", fem_c.T_avg, fem_m.T_avg, fem_f.T_avg, r_fem));
+    suite.gci_results.push_back(compute_gci("FDM", "T_max", fdm_c.T_max, fdm_m.T_max, fdm_f.T_max, r_fdm));
+    suite.gci_results.push_back(compute_gci("FDM", "T_avg", fdm_c.T_avg, fdm_m.T_avg, fdm_f.T_avg, r_fdm));
+    suite.gci_results.push_back(compute_gci("FVM", "T_max", fvm_c.T_max, fvm_m.T_max, fvm_f.T_max, r_fvm));
+    suite.gci_results.push_back(compute_gci("FVM", "T_avg", fvm_c.T_avg, fvm_m.T_avg, fvm_f.T_avg, r_fvm));
 
     // Helper for Richardson extrapolation
     auto extrap_val = [](double fc, double fm, double ff, double r = 1.5, double p_def = 2.0) {
@@ -655,9 +669,10 @@ bool VerificationSuiteResult::export_csv(const std::string& filepath) const {
 
     // 6. GCI Results
     for (const auto& g : gci_results) {
+        std::string p_str = g.is_monotonic ? ("p=" + std::to_string(g.observed_p)) : "p=N/A (non-monotonic)";
         out << "GCI," << g.quantity << "," << g.solver << ","
             << g.val_coarse << "," << g.val_medium << "," << g.val_fine << ","
-            << g.val_extrap << "," << g.gci_21_pct << "% (p=" << g.observed_p << "),PASS\n";
+            << g.val_extrap << "," << g.gci_21_pct << "% (" << p_str << "),PASS\n";
     }
 
     // 7. 30 Probes Full Table

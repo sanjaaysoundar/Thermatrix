@@ -110,7 +110,7 @@ void test_gci_and_probes() {
                   << " | Fine=" << g.val_fine
                   << " | Extrap=" << g.val_extrap
                   << " | GCI_21=" << g.gci_21_pct << "%"
-                  << " | Order p=" << g.observed_p
+                  << " | Order p=" << (g.is_monotonic ? std::to_string(g.observed_p) : "N/A (Non-monotonic)")
                   << " | Asymp=" << g.asymptotic_ratio << "\n";
 
         ASSERT_TRUE(g.gci_21_pct > 0.0 && g.gci_21_pct < 10.0, "GCI_21 is reasonable (< 10%)");
