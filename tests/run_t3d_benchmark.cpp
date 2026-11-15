@@ -61,6 +61,8 @@ int main(int argc, char* argv[]) {
     int warmup = 1;
     std::string linear_solver_str = "pcg-ic0";
     std::string out_path = "results/benchmark_results.csv";
+    std::string geom_type = "heatsink";
+    int fin_count = 9;
     bool run_all = false;
 
     for (int i = 1; i < argc; ++i) {
@@ -77,6 +79,10 @@ int main(int argc, char* argv[]) {
             warmup = std::max(0, std::stoi(argv[++i]));
         } else if (arg == "--linear_solver" && i + 1 < argc) {
             linear_solver_str = argv[++i];
+        } else if (arg == "--geometry" && i + 1 < argc) {
+            geom_type = argv[++i];
+        } else if (arg == "--fins" && i + 1 < argc) {
+            fin_count = std::stoi(argv[++i]);
         } else if (arg == "--out" && i + 1 < argc) {
             out_path = argv[++i];
         } else if (arg == "--all") {
@@ -164,6 +170,65 @@ int main(int argc, char* argv[]) {
         fs::create_directories(target_csv.parent_path());
     }
 
+    HeatSinkParams hp;
+    std::string msh_file;
+    if (geom_type == "cube" || geom_type == "Cube") {
+        hp.base_length = 0.060;
+        hp.base_width = 0.060;
+        hp.base_height = 0.060;
+        hp.n_fins = 0;
+        hp.fin_height = 0.0;
+        msh_file = (res == MeshResolution::Coarse) ? "data/cube_coarse.msh" :
+                   (res == MeshResolution::Medium) ? "data/cube_medium.msh" :
+                                                     "data/cube_fine.msh";
+        level_label = "Cube_" + level_label;
+    } else {
+        if (fin_count == 3) {
+            hp.n_fins = 3;
+            hp.fin_pitch = 0.0150;
+            hp.fin_y0 = 0.0150;
+            msh_file = "data/heatsink_3fins.msh";
+            level_label = "3Fins_" + level_label;
+        } else if (fin_count == 5) {
+            hp.n_fins = 5;
+            hp.fin_pitch = 0.0100;
+            hp.fin_y0 = 0.0100;
+            msh_file = "data/heatsink_5fins.msh";
+            level_label = "5Fins_" + level_label;
+        } else {
+            msh_file = (res == MeshResolution::Coarse) ? "data/heatsink_coarse.msh" :
+                       (res == MeshResolution::Medium) ? "data/heatsink_medium.msh" :
+                                                         "data/heatsink_fine.msh";
+            level_label = "9Fins_" + level_label;
+        }
+    }
+
+    HeatSinkGeometry geom(hp);
+    FemMesh shared_mesh;
+    StructuredGrid3D shared_grid;
+
+    auto find_file = [](const std::string& f) -> std::string {
+        if (fs::exists(f)) return f;
+        if (fs::exists("../" + f)) return "../" + f;
+        if (fs::exists("bin/" + f)) return "bin/" + f;
+        return f;
+    };
+
+    msh_file = find_file(msh_file);
+
+    auto t_m0 = std::chrono::steady_clock::now();
+    if (slv_upper == "FEM" || slv_upper == "FVM") {
+        if (fs::exists(msh_file)) {
+            shared_mesh = load_msh_file(msh_file);
+        } else {
+            shared_mesh = generate_fem_mesh(geom, res);
+        }
+    } else {
+        shared_grid = generate_structured_grid(geom, res);
+    }
+    auto t_m1 = std::chrono::steady_clock::now();
+    double init_mesh_ms = std::chrono::duration<double, std::milli>(t_m1 - t_m0).count();
+
     ThermalProblem prob;
     FemSolver3D fem(prob);
     FdmSolver3D fdm(prob);
@@ -171,9 +236,9 @@ int main(int argc, char* argv[]) {
 
     // Warm-up runs
     for (int w = 0; w < warmup; ++w) {
-        if (slv_upper == "FEM") fem.solve(conv_case, res, sp);
-        else if (slv_upper == "FDM") fdm.solve(conv_case, res, sp);
-        else if (slv_upper == "FVM") fvm.solve(conv_case, res, sp);
+        if (slv_upper == "FEM") fem.solve(shared_mesh, conv_case, sp);
+        else if (slv_upper == "FDM") fdm.solve(shared_grid, conv_case, sp);
+        else if (slv_upper == "FVM") fvm.solve(shared_mesh, conv_case, sp);
     }
 
     // Measured runs
@@ -182,13 +247,16 @@ int main(int argc, char* argv[]) {
 
     for (int r = 0; r < repeats; ++r) {
         SolverResult res_run;
-        if (slv_upper == "FEM") res_run = fem.solve(conv_case, res, sp);
-        else if (slv_upper == "FDM") res_run = fdm.solve(conv_case, res, sp);
-        else if (slv_upper == "FVM") res_run = fvm.solve(conv_case, res, sp);
+        if (slv_upper == "FEM") res_run = fem.solve(shared_mesh, conv_case, sp);
+        else if (slv_upper == "FDM") res_run = fdm.solve(shared_grid, conv_case, sp);
+        else if (slv_upper == "FVM") res_run = fvm.solve(shared_mesh, conv_case, sp);
         else {
             std::cerr << "Error: Unknown solver '" << solver_str << "' (expected fem, fdm, or fvm)\n";
             return 1;
         }
+
+        res_run.t_mesh_ms = init_mesh_ms;
+        res_run.t_total_ms = res_run.t_mesh_ms + res_run.t_assemble_ms + res_run.t_solve_ms + res_run.t_post_ms;
 
         v_mesh.push_back(res_run.t_mesh_ms);
         v_as.push_back(res_run.t_assemble_ms);

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # scripts/make_heatsink.py
 # Generates the conforming tapered heat sink CAD model, watertight STL,
-# and three conforming tetrahedral mesh levels using Gmsh (Python API).
+# 3-level meshes, cube benchmark models, and fin-sweep meshes using Gmsh.
 #
-# Geometry Specification (FIX 3):
+# Geometry Specification (FIX 3 & FIX 5):
 #   Base: 60 x 60 x 4 mm
 #   Fins: 9 Tapered plate fins (2.0 mm root to 1.2 mm tip, 25 mm tall)
 #   Gaps: 4.0 mm at root (about 3 to 4 mm), 4.8 mm at tip
@@ -16,7 +16,7 @@ import sys
 import collections
 import gmsh
 
-def build_heat_sink(model_name, lc_min, lc_max):
+def build_heat_sink(model_name, lc_min, lc_max, n_fins=9, pitch=0.0060, y0=0.0060):
     gmsh.model.add(model_name)
 
     # 1. Base Box: 60 x 60 x 4 mm
@@ -25,16 +25,14 @@ def build_heat_sink(model_name, lc_min, lc_max):
     H_base = 0.004
     base = gmsh.model.occ.addBox(0.0, 0.0, 0.0, L_x, L_y, H_base)
 
-    # 2. 9 Tapered Plate Fins (25 mm tall, 2.0 mm root to 1.2 mm tip)
+    # 2. Tapered Plate Fins (25 mm tall, 2.0 mm root to 1.2 mm tip)
     H_fin = 0.025
-    Z_top = H_base + H_fin # 0.029 m
+    Z_top = H_base + H_fin
     t_root_half = 0.0010   # 1.0 mm (root thickness = 2.0 mm)
     t_tip_half  = 0.0006   # 0.6 mm (tip thickness = 1.2 mm)
-    pitch = 0.0060         # 6.0 mm pitch (gap at root = 4.0 mm)
-    y0 = 0.0060            # First fin center: 6.0 mm
 
     fins = []
-    for i in range(9):
+    for i in range(n_fins):
         yc = y0 + i * pitch
         # 4 vertices of the trapezoid in y-z plane at x = 0
         p1 = gmsh.model.occ.addPoint(0.0, yc - t_root_half, H_base)
@@ -98,8 +96,42 @@ def build_heat_sink(model_name, lc_min, lc_max):
     gmsh.option.setNumber('Mesh.MshFileVersion', 2.2)
 
     gmsh.model.mesh.generate(3)
-
     return solid_vol, patch_tags, adiab_tags, conv_tags
+
+def build_cube(model_name, lc_min, lc_max):
+    gmsh.model.add(model_name)
+    box = gmsh.model.occ.addBox(0.0, 0.0, 0.0, 0.060, 0.060, 0.060)
+    patch_s = gmsh.model.occ.addRectangle(0.015, 0.030, 0.0, 0.010, 0.010)
+    gmsh.model.occ.fragment([(3, box)], [(2, patch_s)])
+    gmsh.model.occ.synchronize()
+
+    patch_tags = []
+    adiab_tags = []
+    conv_tags = []
+    for _, s_tag in gmsh.model.getEntities(2):
+        com = gmsh.model.occ.getCenterOfMass(2, s_tag)
+        if abs(com[2]) < 1e-6:
+            if 0.015 - 1e-5 <= com[0] <= 0.025 + 1e-5 and 0.030 - 1e-5 <= com[1] <= 0.040 + 1e-5:
+                patch_tags.append(s_tag)
+            else:
+                adiab_tags.append(s_tag)
+        else:
+            conv_tags.append(s_tag)
+
+    gmsh.model.addPhysicalGroup(3, [box],       tag=1,  name='Solid')
+    gmsh.model.addPhysicalGroup(2, patch_tags, tag=10, name='SourcePatch')
+    gmsh.model.addPhysicalGroup(2, adiab_tags, tag=20, name='Adiabatic')
+    gmsh.model.addPhysicalGroup(2, conv_tags,  tag=30, name='Convective')
+
+    gmsh.option.setNumber('Mesh.CharacteristicLengthMin', lc_min)
+    gmsh.option.setNumber('Mesh.CharacteristicLengthMax', lc_max)
+    gmsh.option.setNumber('Mesh.Algorithm', 6)
+    gmsh.option.setNumber('Mesh.Algorithm3D', 1)
+    gmsh.option.setNumber('Mesh.Optimize', 1)
+    gmsh.option.setNumber('Mesh.MshFileVersion', 2.2)
+
+    gmsh.model.mesh.generate(3)
+    return box
 
 def check_stl_watertight(stl_path):
     with open(stl_path, 'r') as f:
@@ -139,7 +171,7 @@ def main():
     gmsh.option.setNumber("General.Verbosity", 1) # Quiet output
 
     # -----------------------------------------------------------------
-    # Dimensions & Analytical Properties
+    # Dimensions & Analytical Properties (9 Fins)
     # -----------------------------------------------------------------
     L_x = 0.060
     L_y = 0.060
@@ -150,18 +182,11 @@ def main():
     t_root = 0.0020
     t_tip  = 0.0012
 
-    V_base = L_x * L_y * H_base # 1.44e-5 m^3
-    A_trap = 0.5 * (t_root + t_tip) * H_fin # 4.0e-5 m^2
-    V_fins = n_fins * (L_x * A_trap) # 2.16e-5 m^3
-    V_analytical = V_base + V_fins # 3.60e-5 m^3
-
-    # Analytical Exposed Area:
-    # Base sides: 2*(60*4) + 2*(60*4) = 960 mm^2
-    # Base top: 60*60 - 9*(60*2) = 2520 mm^2
-    # Fins slant: 9 * 2 * (60 * sqrt(25^2 + 0.4^2)) = 27003.456 mm^2
-    # Fins trapezoids: 9 * 2 * 40 = 720 mm^2
-    # Fins tips: 9 * (60 * 1.2) = 648 mm^2
-    A_conv_analytical = 0.031851456 # m^2
+    V_base = L_x * L_y * H_base
+    A_trap = 0.5 * (t_root + t_tip) * H_fin
+    V_fins = n_fins * (L_x * A_trap)
+    V_analytical = V_base + V_fins
+    A_conv_analytical = 0.031851456
 
     print("\n--- Final Heat Sink Specifications ---")
     print(f"  Base Dimensions: {L_x*1e3:.1f} x {L_y*1e3:.1f} x {H_base*1e3:.1f} mm")
@@ -174,22 +199,19 @@ def main():
     print(f"  Analytical Exposed Area:   {A_conv_analytical:.6e} m^2 ({A_conv_analytical*1e6:.1f} mm^2)")
 
     # -----------------------------------------------------------------
-    # Generate Coarse Mesh & Watertight STL
+    # 1. Generate 9-Fin Heat Sink (Coarse, Medium, Fine)
     # -----------------------------------------------------------------
-    print("\n[1/3] Generating Coarse Conforming Tetrahedral Mesh...")
-    build_heat_sink("Coarse", 0.0035, 0.0045)
+    print("\n[1/4] Generating 9-Fin Conforming Tetrahedral Meshes...")
+    build_heat_sink("Coarse_9Fins", 0.0035, 0.0045, n_fins=9, pitch=0.0060, y0=0.0060)
     gmsh.option.setNumber('Mesh.SaveAll', 1)
     gmsh.write("data/heatsink.stl")
     gmsh.write("bin/data/heatsink.stl")
     gmsh.option.setNumber('Mesh.SaveAll', 0)
     gmsh.write("data/heatsink_coarse.msh")
     gmsh.write("bin/data/heatsink_coarse.msh")
+    print(f"      Coarse Mesh: {len(gmsh.model.mesh.getNodes()[0])} nodes, {len(gmsh.model.mesh.getElementsByType(4)[0])} tets")
 
-    nodes_c = len(gmsh.model.mesh.getNodes()[0])
-    tets_c  = len(gmsh.model.mesh.getElementsByType(4)[0])
-    print(f"      Coarse Mesh: {nodes_c} nodes, {tets_c} tetrahedra")
-
-    # Watertightness Verification of data/heatsink.stl
+    # STL Watertightness Check
     n_tri, n_edg, n_non_man = check_stl_watertight("data/heatsink.stl")
     print(f"      STL Watertightness Check: {n_tri} facets, {n_edg} unique edges")
     if n_non_man == 0:
@@ -198,34 +220,63 @@ def main():
         print(f"      [FAIL] Found {n_non_man} non-manifold edges in data/heatsink.stl")
         sys.exit(1)
 
-    # -----------------------------------------------------------------
-    # Generate Medium Mesh
-    # -----------------------------------------------------------------
-    print("\n[2/3] Generating Medium Conforming Tetrahedral Mesh...")
-    build_heat_sink("Medium", 0.0022, 0.0030)
+    build_heat_sink("Medium_9Fins", 0.0022, 0.0030, n_fins=9, pitch=0.0060, y0=0.0060)
     gmsh.option.setNumber('Mesh.SaveAll', 0)
     gmsh.write("data/heatsink_medium.msh")
     gmsh.write("bin/data/heatsink_medium.msh")
+    print(f"      Medium Mesh: {len(gmsh.model.mesh.getNodes()[0])} nodes, {len(gmsh.model.mesh.getElementsByType(4)[0])} tets")
 
-    nodes_m = len(gmsh.model.mesh.getNodes()[0])
-    tets_m  = len(gmsh.model.mesh.getElementsByType(4)[0])
-    print(f"      Medium Mesh: {nodes_m} nodes, {tets_m} tetrahedra")
-
-    # -----------------------------------------------------------------
-    # Generate Fine Mesh
-    # -----------------------------------------------------------------
-    print("\n[3/3] Generating Fine Conforming Tetrahedral Mesh...")
-    build_heat_sink("Fine", 0.0015, 0.0020)
+    build_heat_sink("Fine_9Fins", 0.0015, 0.0020, n_fins=9, pitch=0.0060, y0=0.0060)
     gmsh.option.setNumber('Mesh.SaveAll', 0)
     gmsh.write("data/heatsink_fine.msh")
     gmsh.write("bin/data/heatsink_fine.msh")
+    print(f"      Fine Mesh:   {len(gmsh.model.mesh.getNodes()[0])} nodes, {len(gmsh.model.mesh.getElementsByType(4)[0])} tets")
 
-    nodes_f = len(gmsh.model.mesh.getNodes()[0])
-    tets_f  = len(gmsh.model.mesh.getElementsByType(4)[0])
-    print(f"      Fine Mesh:   {nodes_f} nodes, {tets_f} tetrahedra")
+    # -----------------------------------------------------------------
+    # 2. Generate 60x60x60 mm Solid Cube (Coarse, Medium, Fine)
+    # -----------------------------------------------------------------
+    print("\n[2/4] Generating 60x60x60 mm Solid Cube Meshes...")
+    build_cube("Cube_Coarse", 0.007, 0.010)
+    gmsh.option.setNumber('Mesh.SaveAll', 1)
+    gmsh.write("data/cube.stl")
+    gmsh.write("bin/data/cube.stl")
+    gmsh.option.setNumber('Mesh.SaveAll', 0)
+    gmsh.write("data/cube_coarse.msh")
+    gmsh.write("bin/data/cube_coarse.msh")
+    print(f"      Cube Coarse: {len(gmsh.model.mesh.getNodes()[0])} nodes, {len(gmsh.model.mesh.getElementsByType(4)[0])} tets")
+
+    build_cube("Cube_Medium", 0.004, 0.006)
+    gmsh.option.setNumber('Mesh.SaveAll', 0)
+    gmsh.write("data/cube_medium.msh")
+    gmsh.write("bin/data/cube_medium.msh")
+    print(f"      Cube Medium: {len(gmsh.model.mesh.getNodes()[0])} nodes, {len(gmsh.model.mesh.getElementsByType(4)[0])} tets")
+
+    build_cube("Cube_Fine", 0.0025, 0.0035)
+    gmsh.option.setNumber('Mesh.SaveAll', 0)
+    gmsh.write("data/cube_fine.msh")
+    gmsh.write("bin/data/cube_fine.msh")
+    print(f"      Cube Fine:   {len(gmsh.model.mesh.getNodes()[0])} nodes, {len(gmsh.model.mesh.getElementsByType(4)[0])} tets")
+
+    # -----------------------------------------------------------------
+    # 3. Generate 3-Fin and 5-Fin Meshes for Complexity Study
+    # -----------------------------------------------------------------
+    print("\n[3/4] Generating Fin Sweep Meshes (3 Fins, 5 Fins)...")
+    # 3 Fins: pitch = 15 mm, y0 = 15 mm -> fins at 15, 30, 45 mm
+    build_heat_sink("Heatsink_3Fins", 0.0025, 0.0035, n_fins=3, pitch=0.0150, y0=0.0150)
+    gmsh.option.setNumber('Mesh.SaveAll', 0)
+    gmsh.write("data/heatsink_3fins.msh")
+    gmsh.write("bin/data/heatsink_3fins.msh")
+    print(f"      3-Fin Mesh:  {len(gmsh.model.mesh.getNodes()[0])} nodes, {len(gmsh.model.mesh.getElementsByType(4)[0])} tets")
+
+    # 5 Fins: pitch = 10 mm, y0 = 10 mm -> fins at 10, 20, 30, 40, 50 mm
+    build_heat_sink("Heatsink_5Fins", 0.0025, 0.0035, n_fins=5, pitch=0.0100, y0=0.0100)
+    gmsh.option.setNumber('Mesh.SaveAll', 0)
+    gmsh.write("data/heatsink_5fins.msh")
+    gmsh.write("bin/data/heatsink_5fins.msh")
+    print(f"      5-Fin Mesh:  {len(gmsh.model.mesh.getNodes()[0])} nodes, {len(gmsh.model.mesh.getElementsByType(4)[0])} tets")
 
     gmsh.finalize()
-    print("\n[SUCCESS] Geometry generation, watertight STL, and 3-level meshes completed.")
+    print("\n[SUCCESS] Geometry generation, watertight STL, and all meshes completed.")
 
 if __name__ == "__main__":
     main()
