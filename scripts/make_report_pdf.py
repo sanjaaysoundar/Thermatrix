@@ -203,7 +203,8 @@ def hs_rows_case(case):
                 slv, lvl_name,
                 f"{int(r.n_dof):,}", f"{int(r.n_nnz):,}",
                 str(int(r.iterations)),
-                f"{r.T_min_C:.2f}", f"{r.T_max_C:.2f}", f"{r.T_avg_C:.2f}",
+                f"{r.T_min_C:.2f}", f"{r.T_max_C:.2f}",
+                f"{r.T_avg_C:.2f}", f"{r.T_avg_raw_C:.2f}",
                 f"{abs(r.Q_balance_rel):.1e}",
                 f"{r.t_mesh_ms:.1f}", f"{r.t_assemble_ms:.1f}",
                 f"{r.t_solve_ms:.1f}", f"{r.t_total_ms:.0f}",
@@ -235,7 +236,7 @@ def fin_sweep_rows():
             rows.append([
                 str(fins), slv,
                 f"{int(r.n_dof):,}",
-                f"{r.T_max_C:.2f}", f"{r.T_avg_C:.2f}",
+                f"{r.T_max_C:.2f}", f"{r.T_avg_C:.2f}", f"{r.T_avg_raw_C:.2f}",
                 f"{r.t_total_ms:.0f}", f"{r.peak_mem_mb:.1f}",
             ])
     return rows
@@ -260,7 +261,7 @@ story += [
 ]
 
 cover_meta = [
-    ["Candidate", "Sanjay Soundar"],
+    ["Candidate", "Sanjaay S"],
     ["Repository", "github.com/sanjaaysoundar/Thermatrix (branch: round2)"],
     ["Commit", git_hash],
     ["Generated", gen_date],
@@ -672,13 +673,13 @@ story += [
     SP(0.1),
 ]
 hdr_hs = ["Solver","Level","DOF","NNZ","Iter",
-          "T_min\n(°C)","T_max\n(°C)","T_avg\n(°C)","Q_bal\nerr",
+          "T_min\n(°C)","T_max\n(°C)","T_avg(vol)\n(°C)","T_avg(raw)\n(°C)","Q_bal\nerr",
           "t_mesh\n(ms)","t_asm\n(ms)","t_solve\n(ms)","t_total\n(ms)","Mem\n(MB)"]
 story += [
     make_table(hdr_hs, hs_rows_case("A"),
-               col_widths=[1.5*cm,1.8*cm,2.0*cm,2.5*cm,1.0*cm,
-                            1.5*cm,1.5*cm,1.5*cm,1.4*cm,
-                            1.3*cm,1.1*cm,1.5*cm,1.5*cm,1.2*cm]),
+               col_widths=[1.1*cm,1.3*cm,1.3*cm,1.4*cm,0.8*cm,
+                            1.1*cm,1.1*cm,1.3*cm,1.3*cm,1.3*cm,
+                            1.1*cm,1.0*cm,1.1*cm,1.1*cm,1.1*cm]),
     SP(0.2),
 ]
 story += fig(VIZ/"Benchmark_Charts"/"mesh_convergence_heatsink.png", width=16*cm, max_height=8.5*cm,
@@ -686,8 +687,11 @@ story += fig(VIZ/"Benchmark_Charts"/"mesh_convergence_heatsink.png", width=16*cm
                      "Peak temperature T_max (left) and average temperature T_avg (right) vs Degrees of Freedom.")
 story += [
     SP(0.2),
-    P("<b>Observation:</b> Average temperatures agree across all three solvers within 0.36 °C at the fine level "
-      "(FEM: 56.45 °C, FDM: 56.16 °C, FVM: 56.51 °C). Energy balance error is bounded below 1.3×10⁻¹¹.", BODY),
+    P("<b>Observation:</b> Volume-weighted average temperatures T_avg agree across all three solvers within 0.45 °C at the fine level "
+      "(FEM: 56.5700 °C, FDM: 56.1581 °C, FVM: 56.6084 °C), with FEM and FVM agreeing within 0.04 °C. "
+      "Unweighted arithmetic averages are shown alongside for full transparency (FEM: 56.4492 °C, FDM: 56.1581 °C, FVM: 56.5120 °C); "
+      "volume weighting is essential because unstructured tet element volumes vary across the domain. "
+      "Energy balance error is bounded below 1.3×10⁻¹¹ across all 9-fin configurations.", BODY),
     PageBreak(),
 ]
 
@@ -699,9 +703,9 @@ story += [
 ]
 story += [
     make_table(hdr_hs, hs_rows_case("B"),
-               col_widths=[1.5*cm,1.8*cm,2.0*cm,2.5*cm,1.0*cm,
-                            1.5*cm,1.5*cm,1.5*cm,1.4*cm,
-                            1.3*cm,1.1*cm,1.5*cm,1.5*cm,1.2*cm]),
+               col_widths=[1.1*cm,1.3*cm,1.3*cm,1.4*cm,0.8*cm,
+                            1.1*cm,1.1*cm,1.3*cm,1.3*cm,1.3*cm,
+                            1.1*cm,1.0*cm,1.1*cm,1.1*cm,1.1*cm]),
     SP(0.2),
 ]
 story += fig(VIZ/"Benchmark_Charts"/"tmax_caseA_vs_caseB.png", width=15*cm, max_height=8.5*cm,
@@ -750,9 +754,9 @@ story += [
     P("A parametric complexity sweep across 3, 5, and 9 fins was conducted at Medium mesh resolution (Case A) "
       "to determine how geometric complexity affects cooling effectiveness and computational cost:", BODY),
     SP(0.1),
-    make_table(["Fins","Solver","DOF","T_max (°C)","T_avg (°C)","t_total (ms)","Mem (MB)"],
+    make_table(["Fins","Solver","DOF","T_max (°C)","T_avg (vol) (°C)","T_avg (raw) (°C)","t_total (ms)","Mem (MB)"],
                fin_sweep_rows(),
-               col_widths=[1.5*cm,2*cm,3.5*cm,3*cm,3*cm,3.5*cm,2.5*cm]),
+               col_widths=[1.5*cm,2.0*cm,2.5*cm,2.5*cm,2.5*cm,2.5*cm,2.2*cm,1.7*cm]),
     SP(0.2),
 ]
 story += fig(VIZ/"Benchmark_Charts"/"fin_count_sweep.png", width=16*cm, max_height=9.2*cm,
@@ -780,7 +784,7 @@ story += [
     P("<b>Cross-Section Thermal Comparison (Fine Level, Case A):</b>", BODY),
 ]
 temp_data = [
-    ["Solver", "DOF", "T_min (°C)", "T_max (°C)", "T_avg (°C)", "T_src (°C)", "Fin Drop ΔT (°C)"],
+    ["Solver", "DOF", "T_min (°C)", "T_max (°C)", "T_avg (vol) (°C)", "T_avg (raw) (°C)", "T_src (°C)", "Fin Drop ΔT (°C)"],
 ]
 for slv in ["FEM","FDM","FVM"]:
     r = hs_case(slv, "A", "9Fins_Fine")
@@ -788,9 +792,9 @@ for slv in ["FEM","FDM","FVM"]:
         dt = r.T_max_C - r.T_min_C
         temp_data.append([slv, f"{int(r.n_dof):,}",
                           f"{r.T_min_C:.2f}", f"{r.T_max_C:.2f}",
-                          f"{r.T_avg_C:.2f}", f"{r.T_src_C:.2f}", f"{dt:.2f}"])
+                          f"{r.T_avg_C:.2f}", f"{r.T_avg_raw_C:.2f}", f"{r.T_src_C:.2f}", f"{dt:.2f}"])
 story += [
-    make_table(temp_data[0], temp_data[1:], col_widths=[2*cm,3*cm,2.5*cm,2.5*cm,2.5*cm,2.5*cm,2.5*cm]),
+    make_table(temp_data[0], temp_data[1:], col_widths=[1.8*cm,2.2*cm,2.2*cm,2.2*cm,2.3*cm,2.3*cm,2.2*cm,2.2*cm]),
     SP(0.2),
     P("<b>Field Observations:</b> Heat spreads outward from the offset patch into the 4 mm base plate before conducting "
       "upwards into the 9 tapered fins. The fin temperature drop ΔT ≈ 5.9 °C illustrates high fin efficiency (η > 95%), "
@@ -848,7 +852,8 @@ perf_data = [
     ["Total Wall Time (Median)", "248.4 ms", "8,554.8 ms (34× FEM)", "997.3 ms (4× FEM)"],
     ["Peak Memory Working Set", "24.5 MB", "320.5 MB (13× FEM)", "35.5 MB (1.4× FEM)"],
     ["Peak Temperature T_max", "60.83 °C", "60.36 °C", "61.23 °C"],
-    ["Average Temperature T_avg", "56.45 °C", "56.16 °C", "56.51 °C"],
+    ["Volume-Weighted T_avg (vol)", "56.57 °C", "56.16 °C", "56.61 °C"],
+    ["Unweighted T_avg (raw)", "56.45 °C", "56.16 °C", "56.51 °C"],
     ["Relative Energy Balance Error", "3.19 × 10⁻¹³", "2.52 × 10⁻¹²", "3.48 × 10⁻¹⁴"],
 ]
 story += [
@@ -905,7 +910,8 @@ disc_data = [
     ["Evaluation Criterion", "FEM (Galerkin)", "FDM (Voxel)", "FVM (Cell-Centred)"],
     ["Boundary conformance", "Exact (conforming tet)", "Staircase (voxel steps)", "Exact (shared tet)"],
     ["Degrees of Freedom (Fine)", "11,799", "487,620 (41×)", "36,671 (3.1×)"],
-    ["Average temperature T_avg", "56.57 °C (Ref)", "56.16 °C (−0.41 °C)", "56.61 °C (+0.04 °C)"],
+    ["Volume-Weighted T_avg", "56.57 °C (Ref)", "56.16 °C (−0.41 °C)", "56.61 °C (+0.04 °C)"],
+    ["Unweighted T_avg (raw)", "56.45 °C", "56.16 °C", "56.51 °C"],
     ["Peak temperature T_max", "60.83 °C (Ref)", "60.36 °C (−0.47 °C)", "61.23 °C (+0.40 °C)"],
     ["Total wall runtime", "248.4 ms (1.0×)", "8,554.8 ms (34.4×)", "997.3 ms (4.0×)"],
     ["Peak process memory", "24.5 MB (1.0×)", "320.5 MB (13.1×)", "35.5 MB (1.4×)"],
@@ -1007,7 +1013,7 @@ doc = SimpleDocTemplate(
     leftMargin=1.8*cm, rightMargin=1.8*cm,
     topMargin=2.0*cm, bottomMargin=1.5*cm,
     title="THERMATRIX Round 2 Report",
-    author="Sanjay Soundar",
+    author="Sanjaay S",
     subject="3D Thermal Solver Benchmark",
 )
 

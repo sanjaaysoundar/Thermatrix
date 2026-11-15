@@ -1,0 +1,85 @@
+================================================================================
+ROUND 5 CORRECTION 3: TEMPERATURE AVERAGES & BENCHMARK TABLES AUDIT
+================================================================================
+Timestamp: 2026-11-15T17:10:45+05:30
+Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
+
+1. Temperature Average Definitions & Discretisation Principles:
+----------------------------------------------------------------
+In 3D thermal simulations on non-uniform unstructured grids (e.g., P1 tetrahedral meshes
+used by FEM and FVM), element/dual-cell volumes vary by orders of magnitude across the domain:
+  - FEM/FVM tetrahedral volumes range from 5.23e-10 m^3 (dense refinement near source patch)
+    to 3.03e-9 m^3 (coarser regions in base and fin tips), an element volume ratio of 5.80x.
+  - A raw arithmetic mean over nodes or cell centroids (T_avg_raw = sum(T_i) / N) gives equal
+    weight to small elements in high-density clusters and large elements in low-density zones,
+    imparting an artificial bias toward the local temperature of the densely refined region.
+  - In contrast, the rigorous continuum volume-weighted average temperature is defined as:
+        T_avg_vol = (1 / V_total) * integral_Omega T(x, y, z) dV
+    Discretised as:
+        FEM: sum_e (V_e * sum_{i in e} T_i / 4) / sum_e V_e
+        FVM: sum_P (V_P * T_P) / sum_P V_P
+        FDM: sum_{ijk in solid} (h^3 * T_{ijk}) / sum_{ijk in solid} h^3  [equivalent to raw due to uniform h]
+
+2. Verification of Benchmark Values Against CSV:
+------------------------------------------------
+Querying results/benchmark_results.csv for 9Fins_Fine, Case A:
+  - FEM (Fine, Case A):
+      T_max_C      = 60.8302 °C
+      T_avg_vol_C  = 56.5700 °C
+      T_avg_raw_C  = 56.4492 °C  [Δ_weighting = +0.1208 °C]
+  - FDM (Fine, Case A):
+      T_max_C      = 60.3607 °C
+      T_avg_vol_C  = 56.1581 °C
+      T_avg_raw_C  = 56.1581 °C  [Δ_weighting = 0.0000 °C, uniform Cartesian voxels]
+  - FVM (Fine, Case A):
+      T_max_C      = 61.2329 °C
+      T_avg_vol_C  = 56.6084 °C
+      T_avg_raw_C  = 56.5120 °C  [Δ_weighting = +0.0964 °C]
+
+3. Cross-Solver Reconciliation:
+-------------------------------
+  - Volume-weighted average comparison (Fine, Case A):
+      FEM (56.5700 °C) vs FVM (56.6084 °C): difference = 0.0384 °C (< 0.04 °C)
+      FEM (56.5700 °C) vs FDM (56.1581 °C): difference = -0.4119 °C (Cartesian staircase cooling bias)
+      Overall cross-solver spread: 56.6084 - 56.1581 = 0.4503 °C (0.45 °C)
+  - Raw unweighted nodal average comparison:
+      FEM: 56.4492 °C, FDM: 56.1581 °C, FVM: 56.5120 °C (spread = 0.3539 °C)
+  - Both volume-weighted and unweighted averages are now explicitly tabulated in separate
+    columns labeled 'T_avg (vol)' and 'T_avg (raw)' across all benchmark tables (Table 7.1,
+    Table 7.2, Table 7.4, Table 8.1, Table 9.1, and Table 11.1).
+
+4. Candidate Name Attribution:
+------------------------------
+Updated all document metadata and cover blocks to strictly use:
+  Candidate: Sanjaay S <sanjaaysoundar@gmail.com>
+
+5. Full Test Suite Execution Log:
+---------------------------------
+Command:
+cmd /c "set PATH=C:\msys64\mingw64\bin;%PATH% && cmake --build build && ctest --test-dir build --output-on-failure"
+
+[1/2] Building CXX object CMakeFiles/THERMATRIX.dir/src/app/App.cpp.obj
+[2/2] Linking CXX executable bin\THERMATRIX.exe; Copying data files...
+Test project D:/THERMATRIX/build
+    Start 1: test_stl_parser
+1/8 Test #1: test_stl_parser ..................   Passed    0.02 sec
+    Start 2: test_csv_parser
+2/8 Test #2: test_csv_parser ..................   Passed    0.02 sec
+    Start 3: test_fem_solver
+3/8 Test #3: test_fem_solver ..................   Passed    0.01 sec
+    Start 4: test_backprop
+4/8 Test #4: test_backprop ....................   Passed    0.01 sec
+    Start 5: test_benchmark
+5/8 Test #5: test_benchmark ...................   Passed    0.01 sec
+    Start 6: test_t3d_linalg
+6/8 Test #6: test_t3d_linalg ..................   Passed    0.01 sec
+    Start 7: test_t3d_solvers
+7/8 Test #7: test_t3d_solvers .................   Passed    1.40 sec
+    Start 8: test_t3d_verification
+8/8 Test #8: test_t3d_verification ............   Passed   12.56 sec
+
+100% tests passed out of 8
+
+Total Test time (real) =  14.04 sec
+================================================================================

@@ -212,7 +212,7 @@ void App::openFileDialog(const std::string& filter,
 
 void App::run() {
     // Set default window size for all child windows
-    ImGuiIO& io = ImGui::GetIO();
+    (void)ImGui::GetIO();
 
     while (!glfwWindowShouldClose(window_)) {
         glfwPollEvents();
@@ -764,7 +764,7 @@ void App::renderThermalView() {
             ImVec2 p000 = project3d(x0, y0, z0);
             ImVec2 p100 = project3d(x1, y0, z0);
             ImVec2 p110 = project3d(x1, y1, z0);
-            ImVec2 p010 = project3d(x0, y1, z0);
+            ImVec2 p010 = project3d(x0, y1, z0); (void)p010;
             ImVec2 p001 = project3d(x0, y0, z1);
             ImVec2 p101 = project3d(x1, y0, z1);
             ImVec2 p111 = project3d(x1, y1, z1);
