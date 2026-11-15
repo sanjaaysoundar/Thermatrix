@@ -33,12 +33,20 @@ public:
                        ConvCase conv_case = ConvCase::A,
                        const SolverParams& lparams = SolverParams{});
 
+    // Non-orthogonal correction parameters
+    void set_correction_params(int n_outer, double alpha) noexcept {
+        n_outer_ = n_outer;
+        alpha_no_ = alpha;
+    }
+
     // Mesh non-orthogonality telemetry
     MeshQualityStats last_quality_stats() const noexcept { return quality_stats_; }
 
 private:
     ThermalProblem prob_;
     MeshQualityStats quality_stats_;
+    int n_outer_ { 3 };
+    double alpha_no_ { 0.2 };
 };
 
 } // namespace t3d

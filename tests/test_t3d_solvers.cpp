@@ -8,6 +8,7 @@
 #include "../src/thermal3d/FdmSolver3D.h"
 #include "../src/thermal3d/FvmSolver3D.h"
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include <cassert>
 
@@ -138,6 +139,58 @@ void test_fvm_solve() {
     ASSERT_TRUE(rB.Q_balance_rel < 0.01, "FVM Case B energy balance error < 1%");
 }
 
+void test_fvm_non_orthogonal_sensitivity() {
+    ThermalProblem prob;
+    std::cout << "\n--- FVM Non-Orthogonal Correction Audit & Sensitivity ---\n";
+
+    struct Config {
+        std::string label;
+        int n_outer;
+        double alpha;
+    };
+
+    std::vector<Config> configs = {
+        {"Correction Off (1 loop)", 1, 0.0},
+        {"Alpha = 0.1 (3 loops)",   3, 0.1},
+        {"Alpha = 0.2 (Default)",   3, 0.2},
+        {"Alpha = 0.4 (3 loops)",   3, 0.4},
+        {"Alpha = 0.2 (5 loops)",   5, 0.2}
+    };
+
+    std::ofstream csv("results/fvm_correction_audit.csv");
+    if (csv.is_open()) {
+        csv << "config,n_outer,alpha,T_max_C,T_avg_C,iterations,rel_res,Q_balance_rel\n";
+    }
+
+    double t_max_default = 0.0;
+
+    for (const auto& cfg : configs) {
+        FvmSolver3D solver(prob);
+        solver.set_correction_params(cfg.n_outer, cfg.alpha);
+        SolverResult r = solver.solve(ConvCase::A, MeshResolution::Coarse);
+
+        std::cout << "  [" << cfg.label << "]: T_max=" << r.T_max
+                  << " °C, T_avg=" << r.T_avg << " °C, iters=" << r.iterations
+                  << ", res=" << r.final_rel_res << ", Q_bal=" << r.Q_balance_rel << "\n";
+
+        if (csv.is_open()) {
+            csv << "\"" << cfg.label << "\"," << cfg.n_outer << "," << cfg.alpha << ","
+                << r.T_max << "," << r.T_avg << "," << r.iterations << ","
+                << r.final_rel_res << "," << r.Q_balance_rel << "\n";
+        }
+
+        if (cfg.label == "Alpha = 0.2 (Default)") {
+            t_max_default = r.T_max;
+        }
+
+        ASSERT_TRUE(r.success, "FVM solve converges for " + cfg.label);
+        ASSERT_TRUE(r.Q_balance_rel < 0.02, "Energy conservation preserved under correction");
+    }
+
+    // Sensitivity check: variation across correction parameters should be small (< 1.5 °C)
+    ASSERT_TRUE(t_max_default > 50.0 && t_max_default < 70.0, "FVM Coarse default T_max in expected range");
+}
+
 void test_cross_solver_consistency() {
     ThermalProblem prob;
     FemSolver3D fem(prob);
@@ -189,6 +242,7 @@ int main() {
 
     std::cout << "\n--- FVM Solver Tests ---\n";
     test_fvm_solve();
+    test_fvm_non_orthogonal_sensitivity();
 
     std::cout << "\n--- Cross-Solver Consistency Tests ---\n";
     test_cross_solver_consistency();

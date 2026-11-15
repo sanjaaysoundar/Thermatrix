@@ -280,10 +280,11 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
     double final_res = 0.0;
     bool converged = false;
 
-    for (int corr = 0; corr < 3; ++corr) {
+    int outer_loops = std::max(1, n_outer_);
+    for (int corr = 0; corr < outer_loops; ++corr) {
         // Compute non-orthogonal deferred source: b_corr = b + b_no(T)
         std::vector<double> b_eff = b;
-        if (corr > 0) {
+        if (corr > 0 && n_outer_ > 1 && alpha_no_ > 0.0) {
             // Compute cell gradients via Green-Gauss: grad(T)_P = (1/V_P) * sum_f (T_f * S_f,out)
             std::vector<Vec3> grad_T(n_cells, Vec3{0, 0, 0});
 
@@ -320,7 +321,7 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
             }
 
             // Non-orthogonal flux deferred correction across internal faces with Jasak bounding
-            double alpha_no = 0.2; // under-relaxation for deferred correction
+            double alpha_no = alpha_no_; // under-relaxation for deferred correction
             for (const auto& iface : internal_faces) {
                 Vec3 grad_f = (grad_T[iface.cell_P] + grad_T[iface.cell_N]) * 0.5;
                 double F_no = -prob_.k * iface.k_vec.dot(grad_f);
