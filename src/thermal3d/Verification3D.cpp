@@ -1229,20 +1229,23 @@ bool VerificationSuiteResult::export_csv(const std::string& filepath) const {
         << rmse_fdm_fvm << ",,,0.0," << rmse_fdm_fvm << " C,< 3.0 C," << pass_lt(rmse_fdm_fvm, 3.0) << "\n";
 
     // 3. Solver RMSE versus Consensus Reference
+    // Note: Only 1 of 30 probes (Probe 18) satisfies monotonic 3-solver extrapolation.
+    // Full 30-probe consensus RMSE is UNAVAILABLE. The single-probe comparison is reported explicitly.
+    out << "Probe_Consensus_RMSE,Full_30_Probe_Consensus,FEM_FDM_FVM,NaN,,,NaN,UNAVAILABLE (only 1 of 30 probes has 3-way consensus),requires 30-probe consensus,UNAVAILABLE\n";
     if (!std::isnan(rmse_fem_vs_consensus)) {
-        out << "Consensus_RMSE,RMSE_vs_Consensus,FEM (barycentric),"
-            << rmse_fem_vs_consensus << ",,,0.0," << rmse_fem_vs_consensus << " C,< 2.0 C," << pass_lt(rmse_fem_vs_consensus, 2.0) << "\n";
-        out << "Consensus_RMSE,RMSE_vs_Consensus,FDM (trilinear),"
-            << rmse_fdm_vs_consensus << ",,,0.0," << rmse_fdm_vs_consensus << " C,< 2.5 C," << pass_lt(rmse_fdm_vs_consensus, 2.5) << "\n";
-        out << "Consensus_RMSE,RMSE_vs_Consensus,FVM (cell+Green-Gauss),"
-            << rmse_fvm_vs_consensus << ",,,0.0," << rmse_fvm_vs_consensus << " C,< 2.0 C," << pass_lt(rmse_fvm_vs_consensus, 2.0) << "\n";
-        out << "Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer (barycentric),"
-            << rmse_finer_fem_vs_consensus << ",,,0.0," << rmse_finer_fem_vs_consensus << " C,< 2.0 C," << pass_lt(rmse_finer_fem_vs_consensus, 2.0) << "\n";
+        out << "Single_Probe_Consensus,SinglePoint_Probe18_Only,FEM (barycentric),"
+            << rmse_fem_vs_consensus << ",,,0.0," << rmse_fem_vs_consensus << " C (1-point result: Probe 18 only),< 2.0 C," << pass_lt(rmse_fem_vs_consensus, 2.0) << "\n";
+        out << "Single_Probe_Consensus,SinglePoint_Probe18_Only,FDM (trilinear),"
+            << rmse_fdm_vs_consensus << ",,,0.0," << rmse_fdm_vs_consensus << " C (1-point result: Probe 18 only),< 2.5 C," << pass_lt(rmse_fdm_vs_consensus, 2.5) << "\n";
+        out << "Single_Probe_Consensus,SinglePoint_Probe18_Only,FVM (cell+Green-Gauss),"
+            << rmse_fvm_vs_consensus << ",,,0.0," << rmse_fvm_vs_consensus << " C (1-point result: Probe 18 only),< 2.0 C," << pass_lt(rmse_fvm_vs_consensus, 2.0) << "\n";
+        out << "Single_Probe_Consensus,CrossCheck_Probe18_Only,FEM_Finer (barycentric),"
+            << rmse_finer_fem_vs_consensus << ",,,0.0," << rmse_finer_fem_vs_consensus << " C (1-point result: Probe 18 only),< 2.0 C," << pass_lt(rmse_finer_fem_vs_consensus, 2.0) << "\n";
     } else {
-        out << "Consensus_RMSE,RMSE_vs_Consensus,FEM (barycentric),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
-        out << "Consensus_RMSE,RMSE_vs_Consensus,FDM (trilinear),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
-        out << "Consensus_RMSE,RMSE_vs_Consensus,FVM (cell+Green-Gauss),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
-        out << "Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer (barycentric),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
+        out << "Single_Probe_Consensus,SinglePoint_Probe18_Only,FEM (barycentric),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
+        out << "Single_Probe_Consensus,SinglePoint_Probe18_Only,FDM (trilinear),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
+        out << "Single_Probe_Consensus,SinglePoint_Probe18_Only,FVM (cell+Green-Gauss),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
+        out << "Single_Probe_Consensus,CrossCheck_Probe18_Only,FEM_Finer (barycentric),NaN,,,NaN,UNAVAILABLE (no 3-way probe consensus),consensus unavailable,UNAVAILABLE\n";
     }
 
     // 4. 1D Slab Test (physically normalised)

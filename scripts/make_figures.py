@@ -871,7 +871,7 @@ if not val_df.empty:
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
     # Filter key verification rows for display table
-    key_sections = ['Consensus_Tmax', 'Consensus_Tavg', 'Consensus_RMSE', '1D_Slab', 'MMS_Order', 'GCI']
+    key_sections = ['Consensus_Tmax', 'Consensus_Tavg', 'Pairwise_RMSE', '1D_Slab', 'MMS_Order', 'GCI']
     sub_df = val_df[val_df['section'].isin(key_sections)].copy()
 
     # Create readable summary rows

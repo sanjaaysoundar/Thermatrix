@@ -1,5 +1,5 @@
 THERMATRIX Round 2 – Machine Info
-Generated: 2026-11-15T17:24:38.757892
+Generated: 2026-11-15T18:17:49.855557
 
 OS:               Windows 11 10.0.26300
 Machine:          AMD64
@@ -11,7 +11,7 @@ CMake build type: Release
 Flags:            -O2 -DNDEBUG (MinGW-W64 GCC, Windows x86_64)
 
 Git branch:       round2
-Git commit:       ac1738633899cf1ff9dff3630561559a634a98aa
+Git commit:       145a51a813c922cc5858f5983f1f15abb0756bce
 
 Key results (from complexity_study.csv):
   FEM fine 9-fin:  DOF=11799, Tmax=60.83C

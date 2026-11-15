@@ -10,10 +10,10 @@ Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
 Audited all 33 benchmark rows in results/benchmark_results.csv:
   - Global maximum relative energy conservation error across all 33 runs: 7.5602e-11
     (Occurs in FDM Cube Fine Case A).
-  - Fine 9-Fin Heat Sink Case A:
-      * FEM: 5.21e-13 (machine precision, weak Galerkin formulation)
-      * FDM: 2.52e-12 (staircase ghost-node Robin boundary flux)
-      * FVM: 2.87e-14 (strict cell-centred local face flux conservation)
+  - Fine 9-Fin Heat Sink Case A (results/benchmark_results.csv Rows 15, 16, 17):
+      * FEM: 3.1939e-13 (Row 15: Q_in=10.0 W, Q_conv=10.0 W, Q_balance_rel=3.193900e-13)
+      * FDM: 2.5180e-12 (Row 16: Q_in=10.0 W, Q_conv=10.0 W, Q_balance_rel=2.518000e-12)
+      * FVM: 3.4817e-14 (Row 17: Q_in=10.0 W, Q_conv=10.0 W, Q_balance_rel=3.481700e-14)
   - Updated all report locations (Executive Summary, Table 11.1, Section 12 text,
     and Figure 14 caption) from outdated claims (< 2.6e-11 or < 1e-13) to:
     "maximum recorded relative error of 7.5602×10⁻¹¹ (FEM and FVM achieve machine precision < 6.0×10⁻¹³)".

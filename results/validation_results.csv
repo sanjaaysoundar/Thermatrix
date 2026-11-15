@@ -6,10 +6,11 @@ Consensus_Tavg,CrossCheck_Finer_FEM,FEM_Finer,56.5704,,,NaN,56.5704 C (separate 
 Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FDM,0.415642,,,0.0,0.415642 C,< 3.0 C,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FVM,0.249764,,,0.0,0.249764 C,< 3.0 C,PASS
 Pairwise_RMSE,Fine_Level_Comparison,FDM_vs_FVM,0.545928,,,0.0,0.545928 C,< 3.0 C,PASS
-Consensus_RMSE,RMSE_vs_Consensus,FEM (barycentric),0.103101,,,0.0,0.103101 C,< 2.0 C,PASS
-Consensus_RMSE,RMSE_vs_Consensus,FDM (trilinear),0.305658,,,0.0,0.305658 C,< 2.5 C,PASS
-Consensus_RMSE,RMSE_vs_Consensus,FVM (cell+Green-Gauss),0.193994,,,0.0,0.193994 C,< 2.0 C,PASS
-Consensus_RMSE,CrossCheck_vs_Consensus,FEM_Finer (barycentric),0.102999,,,0.0,0.102999 C,< 2.0 C,PASS
+Probe_Consensus_RMSE,Full_30_Probe_Consensus,FEM_FDM_FVM,NaN,,,NaN,UNAVAILABLE (only 1 of 30 probes has 3-way consensus),requires 30-probe consensus,UNAVAILABLE
+Single_Probe_Consensus,SinglePoint_Probe18_Only,FEM (barycentric),0.103101,,,0.0,0.103101 C (1-point result: Probe 18 only),< 2.0 C,PASS
+Single_Probe_Consensus,SinglePoint_Probe18_Only,FDM (trilinear),0.305658,,,0.0,0.305658 C (1-point result: Probe 18 only),< 2.5 C,PASS
+Single_Probe_Consensus,SinglePoint_Probe18_Only,FVM (cell+Green-Gauss),0.193994,,,0.0,0.193994 C (1-point result: Probe 18 only),< 2.0 C,PASS
+Single_Probe_Consensus,CrossCheck_Probe18_Only,FEM_Finer (barycentric),0.102999,,,0.0,0.102999 C (1-point result: Probe 18 only),< 2.0 C,PASS
 1D_Slab,L2_Relative_Error,FEM,1.49337e-11,,,0.0,1.49337e-09%,< 1.0%,PASS
 1D_Slab,L2_Relative_Error,FDM,5.38737e-11,,,0.0,5.38737e-09%,< 1.0%,PASS
 1D_Slab,L2_Relative_Error,FVM,0.00979424,,,0.0,0.979424%,< 2.0%,PASS

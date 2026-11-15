@@ -50,7 +50,9 @@ Repository: github.com/sanjaaysoundar/Thermatrix (branch: round2)
       * Pairwise Probe RMSE (Fine level, 30 probes): FEM vs FDM = 0.4156 °C,
         FEM vs FVM = 0.2498 °C, FDM vs FVM = 0.5459 °C. All fallback extrapolations removed.
   - Energy Balance Conservation: Reconciled global maximum error to 7.5602e-11 (FDM Cube
-    Fine Case A); 9-Fin Fine Case A errors: FEM = 5.21e-13, FDM = 2.52e-12, FVM = 2.87e-14.
+    Fine Case A); 9-Fin Fine Case A errors (results/benchmark_results.csv Rows 15, 16, 17):
+    FEM = 3.1939e-13, FDM = 2.5180e-12, FVM = 3.4817e-14. Max Case A errors: FEM < 6.4e-13,
+    FDM <= 7.5602e-11, FVM < 3.5e-13. Typical relative errors satisfy machine precision.
   - Timings: Table 9.1 and Table 11.1 display min / median / max statistics. Fine Heat Sink
     median wall times: FEM 256.4 ms (1.0×), FDM 18,656.3 ms (72.8×), FVM 2,745.8 ms (10.7×).
   - Traced Disputed Values: 61.0295, 60.3265, 60.5567 traced to commit 7c6eef3 (clamped
