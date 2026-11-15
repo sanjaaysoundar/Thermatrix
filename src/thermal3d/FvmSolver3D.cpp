@@ -319,11 +319,13 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
                 }
             }
 
-            // Non-orthogonal flux deferred correction across internal faces with under-relaxation
-            double alpha_no = 0.5; // standard under-relaxation for deferred correction
+            // Non-orthogonal flux deferred correction across internal faces with Jasak bounding
+            double alpha_no = 0.2; // under-relaxation for deferred correction
             for (const auto& iface : internal_faces) {
                 Vec3 grad_f = (grad_T[iface.cell_P] + grad_T[iface.cell_N]) * 0.5;
                 double F_no = -prob_.k * iface.k_vec.dot(grad_f);
+                double F_lim = 0.3 * iface.a_PN * std::abs(T[iface.cell_P] - T[iface.cell_N]);
+                F_no = std::max(-F_lim, std::min(F_lim, F_no));
                 b_eff[iface.cell_P] -= alpha_no * F_no;
                 b_eff[iface.cell_N] += alpha_no * F_no;
             }

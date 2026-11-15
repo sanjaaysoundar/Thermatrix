@@ -28,25 +28,25 @@ static int g_passed = 0, g_failed = 0;
 void test_geometry() {
     HeatSinkGeometry geom;
     double vol = geom.total_volume();
-    // Base: 0.08*0.06*0.01 = 4.8e-5. Fins: 5 * (0.08*0.002*0.03) = 2.4e-5. Total = 7.2e-5 m³
-    ASSERT_NEAR(vol, 7.2e-5, 1e-8, "Heat sink analytical volume = 7.2e-5 m³");
+    // Base: 0.06*0.06*0.004 = 1.44e-5. Fins: 9 * (0.06*0.5*(0.002+0.0012)*0.025) = 2.16e-5. Total = 3.6e-5 m³
+    ASSERT_NEAR(vol, 3.6e-5, 1e-8, "Heat sink analytical volume = 3.6e-5 m³");
 
     double a_conv = geom.total_exposed_area();
     ASSERT_TRUE(a_conv > 0.025 && a_conv < 0.040, "Heat sink convective area in [0.025, 0.040] m²");
 
     // Point in base
-    ASSERT_TRUE(geom.is_in_solid(0.04, 0.03, 0.005), "Point inside base slab is solid");
-    // Point in fin 2 (center fin at y=30mm, x=40mm, z=25mm)
-    ASSERT_TRUE(geom.is_in_solid(0.04, 0.03, 0.025), "Point inside center fin is solid");
-    // Point in air gap between fin 1 and fin 2 (y=24mm)
-    ASSERT_TRUE(!geom.is_in_solid(0.04, 0.024, 0.025), "Point in air gap is NOT solid");
+    ASSERT_TRUE(geom.is_in_solid(0.030, 0.030, 0.002), "Point inside base slab is solid");
+    // Point in fin 4 (center fin at y=30mm, x=30mm, z=15mm)
+    ASSERT_TRUE(geom.is_in_solid(0.030, 0.030, 0.015), "Point inside center fin is solid");
+    // Point in air gap between fin 3 and fin 4 (y=27mm)
+    ASSERT_TRUE(!geom.is_in_solid(0.030, 0.027, 0.015), "Point in air gap is NOT solid");
     // Point outside domain
-    ASSERT_TRUE(!geom.is_in_solid(0.10, 0.03, 0.01), "Point outside bounding box is NOT solid");
+    ASSERT_TRUE(!geom.is_in_solid(0.10, 0.030, 0.01), "Point outside bounding box is NOT solid");
 
-    // Source patch test (patch is 30±5 mm, 35±5 mm, at z=0)
-    ASSERT_TRUE(geom.is_in_source_patch(0.030, 0.035, 0.0), "Patch center is in source patch");
-    ASSERT_TRUE(!geom.is_in_source_patch(0.010, 0.010, 0.0), "Point outside patch is not in source patch");
-    ASSERT_TRUE(!geom.is_in_source_patch(0.030, 0.035, 0.01), "Point at z>0 is not in underside patch");
+    // Source patch test (patch is 20±5 mm, 35±5 mm, at z=0)
+    ASSERT_TRUE(geom.is_in_source_patch(0.020, 0.035, 0.0), "Patch center is in source patch");
+    ASSERT_TRUE(!geom.is_in_source_patch(0.050, 0.050, 0.0), "Point outside patch is not in source patch");
+    ASSERT_TRUE(!geom.is_in_source_patch(0.020, 0.035, 0.01), "Point at z>0 is not in underside patch");
 }
 
 void test_fem_mesh() {
@@ -57,7 +57,7 @@ void test_fem_mesh() {
     ASSERT_TRUE(mesh.n_boundary_faces() > 100, "FEM mesh has > 100 boundary faces");
 
     double vol = mesh.total_volume();
-    ASSERT_NEAR(vol, 7.2e-5, 1e-6, "FEM mesh discretized volume matches exact volume (7.2e-5 m³)");
+    ASSERT_NEAR(vol, 3.6e-5, 1e-6, "FEM mesh discretized volume matches exact volume (3.6e-5 m³)");
 
     double src_area = mesh.total_source_area();
     ASSERT_NEAR(src_area, 1.0e-4, 2e-5, "FEM mesh source patch area approx 100 mm²");
@@ -71,7 +71,7 @@ void test_structured_grid() {
     ASSERT_TRUE(!grid.boundary_faces.empty(), "Grid has boundary faces");
 
     double vol = grid.total_volume();
-    ASSERT_NEAR(vol, 7.2e-5, 1e-5, "Voxel grid volume approximates exact volume within resolution");
+    ASSERT_NEAR(vol, 3.6e-5, 1e-5, "Voxel grid volume approximates exact volume within resolution");
 }
 
 void test_fem_solve() {

@@ -103,8 +103,10 @@ struct StructuredGrid3D {
 };
 
 // ---------------------------------------------------------------------------
-// Mesh Generator Functions
+// Mesh Generator & MSH Reader Functions
 // ---------------------------------------------------------------------------
+FemMesh load_msh_file(const std::string& filepath);
+
 FemMesh generate_fem_mesh(const HeatSinkGeometry& geom, MeshResolution res);
 
 StructuredGrid3D generate_structured_grid(const HeatSinkGeometry& geom, MeshResolution res);

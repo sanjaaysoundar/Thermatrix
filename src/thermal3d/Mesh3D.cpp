@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <iostream>
+#include <fstream>
 
 namespace thermatrix {
 namespace t3d {
@@ -88,9 +89,110 @@ double tri_area(const Point3D& a, const Point3D& b, const Point3D& c,
 } // namespace
 
 // ---------------------------------------------------------------------------
+// Gmsh .msh 2.2 Reader
+// ---------------------------------------------------------------------------
+FemMesh load_msh_file(const std::string& filepath) {
+    FemMesh mesh;
+    std::ifstream in(filepath);
+    if (!in) {
+        throw std::runtime_error("load_msh_file: cannot open " + filepath);
+    }
+
+    std::string line;
+    std::map<int, int> node_id_to_idx;
+
+    while (std::getline(in, line)) {
+        if (line.find("$Nodes") != std::string::npos) {
+            int n_nodes = 0;
+            if (!(in >> n_nodes)) break;
+            mesh.nodes.reserve(n_nodes);
+            for (int i = 0; i < n_nodes; ++i) {
+                int id;
+                double x, y, z;
+                in >> id >> x >> y >> z;
+                node_id_to_idx[id] = static_cast<int>(mesh.nodes.size());
+                mesh.nodes.push_back({x, y, z});
+            }
+        } else if (line.find("$Elements") != std::string::npos) {
+            int n_elements = 0;
+            if (!(in >> n_elements)) break;
+            for (int i = 0; i < n_elements; ++i) {
+                int elem_id, elem_type, n_tags;
+                in >> elem_id >> elem_type >> n_tags;
+                std::vector<int> tags(n_tags);
+                for (int t = 0; t < n_tags; ++t) in >> tags[t];
+
+                int phys_tag = (!tags.empty()) ? tags[0] : 0;
+
+                if (elem_type == 2) {
+                    // 3-node triangle (boundary face)
+                    int n0, n1, n2;
+                    in >> n0 >> n1 >> n2;
+                    int v0 = node_id_to_idx[n0];
+                    int v1 = node_id_to_idx[n1];
+                    int v2 = node_id_to_idx[n2];
+
+                    std::array<double, 3> normal;
+                    double area = tri_area(mesh.nodes[v0], mesh.nodes[v1], mesh.nodes[v2], normal);
+
+                    BcType bc = BcType::Robin;
+                    if (phys_tag == 10) bc = BcType::HeatFlux;
+                    else if (phys_tag == 20) bc = BcType::Adiabatic;
+                    else bc = BcType::Robin;
+
+                    mesh.boundary_faces.push_back({{v0, v1, v2}, normal, area, bc});
+                } else if (elem_type == 4) {
+                    // 4-node tetrahedron (volume element)
+                    int n0, n1, n2, n3;
+                    in >> n0 >> n1 >> n2 >> n3;
+                    int v0 = node_id_to_idx[n0];
+                    int v1 = node_id_to_idx[n1];
+                    int v2 = node_id_to_idx[n2];
+                    int v3 = node_id_to_idx[n3];
+
+                    double vol = tet_volume(mesh.nodes[v0], mesh.nodes[v1],
+                                            mesh.nodes[v2], mesh.nodes[v3]);
+                    mesh.elements.push_back({{v0, v1, v2, v3}, vol});
+                } else {
+                    // Skip other element types (1 for line, 15 for point)
+                    std::string rest;
+                    std::getline(in, rest);
+                }
+            }
+        }
+    }
+
+    return mesh;
+}
+
+// ---------------------------------------------------------------------------
 // Generate FEM Tetrahedral Mesh
 // ---------------------------------------------------------------------------
 FemMesh generate_fem_mesh(const HeatSinkGeometry& geom, MeshResolution res) {
+    std::string msh_basename = (res == MeshResolution::Coarse) ? "heatsink_coarse.msh" :
+                               (res == MeshResolution::Medium) ? "heatsink_medium.msh" :
+                                                                 "heatsink_fine.msh";
+
+    const std::vector<std::string> search_dirs = { "data/", "../data/", "bin/data/", "" };
+    for (const auto& dir : search_dirs) {
+        std::string cand = dir + msh_basename;
+        std::ifstream check(cand);
+        if (check.good()) {
+            return load_msh_file(cand);
+        }
+    }
+
+    // Attempt offline gmsh generator script if file not found
+    std::system("python scripts/make_heatsink.py");
+    for (const auto& dir : search_dirs) {
+        std::string cand = dir + msh_basename;
+        std::ifstream check(cand);
+        if (check.good()) {
+            return load_msh_file(cand);
+        }
+    }
+
+    // Fallback: structured tetrahedral hex subdivision
     FemMesh mesh;
     const auto& p = geom.params();
 
@@ -317,9 +419,9 @@ StructuredGrid3D generate_structured_grid(const HeatSinkGeometry& geom, MeshReso
     if (res == MeshResolution::Medium) scale = 2;
     else if (res == MeshResolution::Fine) scale = 3;
 
-    grid.nx = 40 * scale;
-    grid.ny = 30 * scale;
-    grid.nz = 20 * scale;
+    grid.nx = 30 * scale;
+    grid.ny = 60 * scale;
+    grid.nz = 29 * scale;
 
     grid.origin = {0.0, 0.0, 0.0};
     grid.dx = p.base_length / grid.nx;
