@@ -166,6 +166,15 @@ add_executable(run_t3d_benchmark tests/run_t3d_benchmark.cpp)
 target_include_directories(run_t3d_benchmark PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(run_t3d_benchmark PRIVATE thermatrix_t3d)
 
+add_executable(verify_r4_slab tests/verify_r4_slab.cpp)
+target_include_directories(verify_r4_slab PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(verify_r4_slab PRIVATE thermatrix_t3d)
+add_test(NAME verify_r4_slab COMMAND verify_r4_slab)
+
+add_executable(r4_analysis tests/r4_analysis.cpp)
+target_include_directories(r4_analysis PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(r4_analysis PRIVATE thermatrix_t3d)
+
 # ── Copy data files to binary dir ─────────────────────────────────────────────
 add_custom_command(TARGET THERMATRIX POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

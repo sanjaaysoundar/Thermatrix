@@ -3,6 +3,7 @@
 // Cell-Centred Finite Volume formulation on the SAME unstructured tetrahedral mesh as FEM.
 // namespace thermatrix::t3d
 
+#include <vector>
 #include "ThermalProblem.h"
 #include "Mesh3D.h"
 #include "SolverResult.h"
@@ -47,10 +48,14 @@ public:
                            const SolverParams& lparams = SolverParams{});
 
     // Non-orthogonal correction parameters
-    void set_correction_params(int n_outer, double alpha) noexcept {
+    // n_outer: max outer loops; alpha: correction strength (1 = full); limiter: 0 = off
+    void set_correction_params(int n_outer, double alpha, double limiter = 0.0, double outer_tol = 1e-9) noexcept {
         n_outer_ = n_outer;
         alpha_no_ = alpha;
+        limiter_ratio_ = limiter;
+        outer_tol_ = outer_tol;
     }
+    const std::vector<double>& outer_history() const noexcept { return outer_history_; }
 
     // Mesh non-orthogonality telemetry
     MeshQualityStats last_quality_stats() const noexcept { return quality_stats_; }
@@ -58,8 +63,11 @@ public:
 private:
     ThermalProblem prob_;
     MeshQualityStats quality_stats_;
-    int n_outer_ { 3 };
-    double alpha_no_ { 0.2 };
+    int n_outer_ { 40 };
+    double alpha_no_ { 1.0 };
+    double limiter_ratio_ { 0.0 };
+    double outer_tol_ { 1e-9 };
+    std::vector<double> outer_history_;
 };
 
 } // namespace t3d

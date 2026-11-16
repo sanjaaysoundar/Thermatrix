@@ -140,6 +140,8 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
         double q_load; // Heat flux load [W]
         BcType bc_type;
         Vec3 center;
+        double dist;   // normal distance cell centre -> face
+        Vec3 normal;   // outward unit normal
     };
 
     std::vector<InternalFace> internal_faces;
@@ -148,6 +150,15 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
     double min_deg = 180.0, max_deg = 0.0, sum_deg = 0.0;
 
     HeatSinkGeometry geom;
+
+    // BC tags: take them from the mesh (same source of truth as FEM) when available;
+    // fall back to the heat-sink geometric rule for meshes without tagged boundary faces.
+    std::map<FaceKey, BcType> mesh_bc;
+    for (const auto& bt : mesh.boundary_faces) {
+        std::array<int, 3> s3 = bt.v;
+        std::sort(s3.begin(), s3.end());
+        mesh_bc[FaceKey{s3[0], s3[1], s3[2]}] = bt.bc_type;
+    }
 
     for (const auto& pair : face_map) {
         const auto& half_list = pair.second;
@@ -176,17 +187,18 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
                 f_unit_norm = f_unit_norm * -1.0;
             }
 
-            double cos_theta = std::max(0.01, std::min(1.0, f_unit_norm.dot(e_PN)));
+            double cos_theta = std::max(0.05, std::min(1.0, f_unit_norm.dot(e_PN)));
             double deg = std::acos(cos_theta) * (180.0 / 3.14159265358979323846);
 
             min_deg = std::min(min_deg, deg);
             max_deg = std::max(max_deg, deg);
             sum_deg += deg;
 
-            // Orthogonal conductance: a_PN = k * Area * (e_PN . n) / dist
-            double a_pn = prob_.k * area * cos_theta / dist;
-            // Non-orthogonal correction vector: k_f = Area * (n - (e_PN . n) e_PN)
-            Vec3 k_vec = (f_unit_norm - e_PN * cos_theta) * area;
+            // Over-relaxed decomposition of the face vector S = A n:  S = Delta + k_f,
+            //   Delta = (A / cos(theta)) e_PN   -> implicit (matrix) part:  a_PN = k A / (d cos(theta))
+            //   k_f   = A n - (A / cos(theta)) e_PN -> deferred correction vector
+            double a_pn = prob_.k * area / (cos_theta * dist);
+            Vec3 k_vec = f_unit_norm * area - e_PN * (area / cos_theta);
 
             internal_faces.push_back({cP, cN, a_pn, k_vec, area, deg});
 
@@ -201,7 +213,10 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
             double dist_P = std::max(1e-6, std::abs(out_dir.dot(f_unit_norm)));
 
             BcType bctype = BcType::Robin;
-            if (std::abs(f_center.z) < 1e-6) {
+            auto it_bc = mesh_bc.find(pair.first);
+            if (it_bc != mesh_bc.end()) {
+                bctype = it_bc->second;
+            } else if (std::abs(f_center.z) < 1e-6) {
                 if (geom.is_in_source_patch(f_center.x, f_center.y, f_center.z)) {
                     bctype = BcType::HeatFlux;
                 } else {
@@ -222,7 +237,7 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
                 q_load = q_flux * area;
             }
 
-            boundary_faces.push_back({cP, area, g_b, q_load, bctype, f_center});
+            boundary_faces.push_back({cP, area, g_b, q_load, bctype, f_center, dist_P, f_unit_norm});
         }
     }
 
@@ -307,58 +322,94 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
     bool converged = false;
 
     quality_stats_.outer_residuals.clear();
+    // ---------------------------------------------------------------------
+    // Deferred non-orthogonal correction (minimum-correction approach).
+    //   matrix : orthogonal part a_PN = k A cos(theta) / d   (symmetric, SPD, same for every outer loop)
+    //   RHS    : -F_no(T^m),  F_no = -k  k_f . grad_f(T^m)
+    // Cell gradients: weighted least squares (exact for linear fields) using the face neighbours;
+    // boundary faces enter as pseudo-neighbours with the face temperature implied by the BC.
+    // The correction is applied at full strength (alpha = 1 by default) and the outer loop is iterated
+    // until max|dT| < outer_tol, so the converged solution contains the complete flux.
+    // ---------------------------------------------------------------------
+    struct LsqEntry { int kind; int idx; Vec3 dx; double w; }; // kind 0: neighbour cell idx; kind 1: boundary face idx
+    std::vector<std::vector<LsqEntry>> lsq(n_cells);
+    for (const auto& iface : internal_faces) {
+        Vec3 d = cell_centers[iface.cell_N] - cell_centers[iface.cell_P];
+        double w = 1.0 / std::max(1e-30, d.dot(d));
+        lsq[iface.cell_P].push_back({0, iface.cell_N, d, w});
+        lsq[iface.cell_N].push_back({0, iface.cell_P, d * -1.0, w});
+    }
+    for (size_t b = 0; b < boundary_faces.size(); ++b) {
+        const auto& bf = boundary_faces[b];
+        // Boundary constraint acts on the NORMAL gradient only: pseudo-neighbour at the foot of the
+        // perpendicular from the cell centre (the BC temperature relations are valid along the normal).
+        Vec3 d = bf.normal * bf.dist;
+        double w = 1.0 / std::max(1e-30, d.dot(d));
+        lsq[bf.cell_P].push_back({1, static_cast<int>(b), d, w});
+    }
+    std::vector<std::array<double, 9>> inv_M(n_cells);
+    std::vector<char> lsq_ok(n_cells, 0);
+    for (int e = 0; e < n_cells; ++e) {
+        double M[3][3] = {{0,0,0},{0,0,0},{0,0,0}};
+        for (const auto& en : lsq[e]) {
+            double dv[3] = {en.dx.x, en.dx.y, en.dx.z};
+            for (int a = 0; a < 3; ++a) for (int c = 0; c < 3; ++c) M[a][c] += en.w * dv[a] * dv[c];
+        }
+        double det = M[0][0]*(M[1][1]*M[2][2]-M[1][2]*M[2][1])
+                   - M[0][1]*(M[1][0]*M[2][2]-M[1][2]*M[2][0])
+                   + M[0][2]*(M[1][0]*M[2][1]-M[1][1]*M[2][0]);
+        double scale = (M[0][0] + M[1][1] + M[2][2]);
+        if (std::abs(det) > 1e-12 * scale * scale * scale) {
+            double id = 1.0 / det;
+            inv_M[e] = {
+                (M[1][1]*M[2][2]-M[1][2]*M[2][1])*id, (M[0][2]*M[2][1]-M[0][1]*M[2][2])*id, (M[0][1]*M[1][2]-M[0][2]*M[1][1])*id,
+                (M[1][2]*M[2][0]-M[1][0]*M[2][2])*id, (M[0][0]*M[2][2]-M[0][2]*M[2][0])*id, (M[0][2]*M[1][0]-M[0][0]*M[1][2])*id,
+                (M[1][0]*M[2][1]-M[1][1]*M[2][0])*id, (M[0][1]*M[2][0]-M[0][0]*M[2][1])*id, (M[0][0]*M[1][1]-M[0][1]*M[1][0])*id };
+            lsq_ok[e] = 1;
+        }
+    }
+
+    auto boundary_face_T = [&](const BoundaryFace& bf, double T_P) {
+        if (bf.bc_type == BcType::Robin) {
+            return (prob_.k * T_P + h_val * bf.dist * T_inf) / (prob_.k + h_val * bf.dist);
+        } else if (bf.bc_type == BcType::HeatFlux) {
+            return T_P + (bf.q_load / bf.area) * bf.dist / prob_.k;
+        }
+        return T_P;   // adiabatic
+    };
+
     int outer_loops = std::max(1, n_outer_);
+    outer_history_.clear();
     for (int corr = 0; corr < outer_loops; ++corr) {
-        // Compute non-orthogonal deferred source: b_corr = b + b_no(T)
         std::vector<double> b_eff = b;
-        if (corr > 0 && n_outer_ > 1 && alpha_no_ > 0.0) {
-            // Compute cell gradients via Green-Gauss: grad(T)_P = (1/V_P) * sum_f (T_f * S_f,out)
+        if (corr > 0 && alpha_no_ > 0.0) {
             std::vector<Vec3> grad_T(n_cells, Vec3{0, 0, 0});
-
-            // 1. Internal faces contribution to Green-Gauss gradient
-            for (const auto& iface : internal_faces) {
-                double T_face = 0.5 * (T[iface.cell_P] + T[iface.cell_N]);
-                Vec3 d_PN = cell_centers[iface.cell_N] - cell_centers[iface.cell_P];
-                double dist = d_PN.norm();
-                Vec3 e_PN = (dist > 1e-15) ? (d_PN * (1.0 / dist)) : Vec3{0, 0, 1};
-                double cos_th = std::max(0.01, std::min(1.0, std::cos(iface.non_ortho_deg * (3.14159265358979323846 / 180.0))));
-                Vec3 S_vec = e_PN * (iface.area * cos_th) + iface.k_vec;
-
-                grad_T[iface.cell_P] = grad_T[iface.cell_P] + S_vec * T_face;
-                grad_T[iface.cell_N] = grad_T[iface.cell_N] - S_vec * T_face;
-            }
-
-            // 2. Boundary faces contribution to Green-Gauss gradient
-            for (const auto& bface : boundary_faces) {
-                double T_face = T[bface.cell_P];
-                if (bface.bc_type == BcType::Robin) {
-                    T_face = (prob_.k * T[bface.cell_P] + 1e-3 * h_val * T_inf) / (prob_.k + 1e-3 * h_val);
-                }
-                Vec3 out_dir = (bface.center - cell_centers[bface.cell_P]).normalized();
-                Vec3 S_b = out_dir * bface.area;
-                grad_T[bface.cell_P] = grad_T[bface.cell_P] + S_b * T_face;
-            }
-
-            // Divide by cell volume
             for (int e = 0; e < n_cells; ++e) {
-                double v = mesh.elements[e].volume;
-                if (v > 1e-18) {
-                    grad_T[e] = grad_T[e] * (1.0 / v);
+                if (!lsq_ok[e]) continue;
+                double r[3] = {0, 0, 0};
+                for (const auto& en : lsq[e]) {
+                    double T_nb = (en.kind == 0) ? T[en.idx] : boundary_face_T(boundary_faces[en.idx], T[e]);
+                    double dT = T_nb - T[e];
+                    r[0] += en.w * en.dx.x * dT; r[1] += en.w * en.dx.y * dT; r[2] += en.w * en.dx.z * dT;
                 }
+                const auto& I = inv_M[e];
+                grad_T[e] = Vec3{I[0]*r[0] + I[1]*r[1] + I[2]*r[2],
+                                 I[3]*r[0] + I[4]*r[1] + I[5]*r[2],
+                                 I[6]*r[0] + I[7]*r[1] + I[8]*r[2]};
             }
-
-            // Non-orthogonal flux deferred correction across internal faces with Jasak bounding
-            double alpha_no = alpha_no_; // under-relaxation for deferred correction
             for (const auto& iface : internal_faces) {
                 Vec3 grad_f = (grad_T[iface.cell_P] + grad_T[iface.cell_N]) * 0.5;
                 double F_no = -prob_.k * iface.k_vec.dot(grad_f);
-                double F_lim = 0.3 * iface.a_PN * std::abs(T[iface.cell_P] - T[iface.cell_N]);
-                F_no = std::max(-F_lim, std::min(F_lim, F_no));
-                b_eff[iface.cell_P] -= alpha_no * F_no;
-                b_eff[iface.cell_N] += alpha_no * F_no;
+                if (limiter_ratio_ > 0.0) {
+                    double F_lim = limiter_ratio_ * iface.a_PN * std::abs(T[iface.cell_P] - T[iface.cell_N]);
+                    F_no = std::max(-F_lim, std::min(F_lim, F_no));
+                }
+                b_eff[iface.cell_P] -= alpha_no_ * F_no;
+                b_eff[iface.cell_N] += alpha_no_ * F_no;
             }
         }
 
+        std::vector<double> T_prev = T;
         LinearSolveResult sol_res;
         if (method_name == "SSOR") {
             sol_res = ssor_solve(A, b_eff, T, p);
@@ -369,6 +420,12 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
         final_res = sol_res.final_rel_res;
         converged = sol_res.converged;
         quality_stats_.outer_residuals.push_back(sol_res.final_rel_res);
+
+        double dmax = 0.0;
+        for (int e = 0; e < n_cells; ++e) dmax = std::max(dmax, std::abs(T[e] - T_prev[e]));
+        outer_history_.push_back(dmax);
+        if (corr > 0 && dmax < outer_tol_) break;
+        if (n_outer_ <= 1 || alpha_no_ <= 0.0) break;
     }
 
     auto t_sol_1 = Clock::now();
@@ -491,6 +548,7 @@ SolverResult FvmSolver3D::solve_mms(
         double g_b;
         Vec3 center;
         Vec3 normal;
+        double dist_P;
     };
 
     std::vector<InternalFaceMMS> internal_faces;
@@ -520,9 +578,9 @@ SolverResult FvmSolver3D::solve_mms(
             Vec3 e_PN = (dist > 1e-15) ? (d_PN * (1.0 / dist)) : Vec3{0, 0, 1};
             if (n_f.dot(e_PN) < 0.0) n_f = n_f * -1.0;
 
-            double cos_theta = std::max(0.01, std::min(1.0, e_PN.dot(n_f)));
-            double a_PN = prob_.k * (area * cos_theta) / std::max(dist, 1e-15);
-            Vec3 k_vec = (n_f - e_PN * cos_theta) * area;
+            double cos_theta = std::max(0.05, std::min(1.0, e_PN.dot(n_f)));
+            double a_PN = prob_.k * area / (cos_theta * std::max(dist, 1e-15));
+            Vec3 k_vec = n_f * area - e_PN * (area / cos_theta);
 
             internal_faces.push_back({cP, cN, a_PN, k_vec, area, cos_theta});
         } else if (hf_list.size() == 1) {
@@ -531,8 +589,7 @@ SolverResult FvmSolver3D::solve_mms(
             if (n_f.dot(out_dir) < 0.0) n_f = n_f * -1.0;
             double dist_P = std::max(1e-6, std::abs(out_dir.dot(n_f)));
             double g_b = prob_.k * area / dist_P;
-            Vec3 proj = cell_centers[cP] + n_f * dist_P;
-            boundary_faces.push_back({cP, area, g_b, proj, n_f});
+            boundary_faces.push_back({cP, area, g_b, f_center, n_f, dist_P});
         }
     }
 
@@ -557,6 +614,43 @@ SolverResult FvmSolver3D::solve_mms(
     result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
     result.n_nnz = A.nnz();
 
+    // Setup Weighted Least Squares (WLS) gradient reconstruction on cells
+    struct LsqEntry { int kind; int idx; Vec3 dx; double w; };
+    std::vector<std::vector<LsqEntry>> lsq(n_cells);
+    for (const auto& iface : internal_faces) {
+        Vec3 d = cell_centers[iface.cell_N] - cell_centers[iface.cell_P];
+        double w = 1.0 / std::max(1e-30, d.dot(d));
+        lsq[iface.cell_P].push_back({0, iface.cell_N, d, w});
+        lsq[iface.cell_N].push_back({0, iface.cell_P, d * -1.0, w});
+    }
+    for (size_t bf_idx = 0; bf_idx < boundary_faces.size(); ++bf_idx) {
+        const auto& bf = boundary_faces[bf_idx];
+        Vec3 d = bf.normal * bf.dist_P;
+        double w = 1.0 / std::max(1e-30, d.dot(d));
+        lsq[bf.cell_P].push_back({1, static_cast<int>(bf_idx), d, w});
+    }
+    std::vector<std::array<double, 9>> inv_M(n_cells);
+    std::vector<char> lsq_ok(n_cells, 0);
+    for (int e = 0; e < n_cells; ++e) {
+        double M[3][3] = {{0,0,0},{0,0,0},{0,0,0}};
+        for (const auto& en : lsq[e]) {
+            double dv[3] = {en.dx.x, en.dx.y, en.dx.z};
+            for (int a = 0; a < 3; ++a) for (int c = 0; c < 3; ++c) M[a][c] += en.w * dv[a] * dv[c];
+        }
+        double det = M[0][0]*(M[1][1]*M[2][2]-M[1][2]*M[2][1])
+                   - M[0][1]*(M[1][0]*M[2][2]-M[1][2]*M[2][0])
+                   + M[0][2]*(M[1][0]*M[2][1]-M[1][1]*M[2][0]);
+        double scale = (M[0][0] + M[1][1] + M[2][2]);
+        if (std::abs(det) > 1e-12 * scale * scale * scale) {
+            double id = 1.0 / det;
+            inv_M[e] = {
+                (M[1][1]*M[2][2]-M[1][2]*M[2][1])*id, (M[0][2]*M[2][1]-M[0][1]*M[2][2])*id, (M[0][1]*M[1][2]-M[0][2]*M[1][1])*id,
+                (M[1][2]*M[2][0]-M[1][0]*M[2][2])*id, (M[0][0]*M[2][2]-M[0][2]*M[2][0])*id, (M[0][2]*M[1][0]-M[0][0]*M[1][2])*id,
+                (M[1][0]*M[2][1]-M[1][1]*M[2][0])*id, (M[0][1]*M[2][0]-M[0][0]*M[2][1])*id, (M[0][0]*M[1][1]-M[0][1]*M[1][0])*id };
+            lsq_ok[e] = 1;
+        }
+    }
+
     std::vector<double> T(n_cells, 300.0);
     SolverParams p = lparams;
     if (p.rel_tol <= 0.0) p.rel_tol = 1e-12;
@@ -571,41 +665,43 @@ SolverResult FvmSolver3D::solve_mms(
     int outer_loops = std::max(1, n_outer_);
     for (int corr = 0; corr < outer_loops; ++corr) {
         std::vector<double> b_eff = b;
-        if (corr > 0 && n_outer_ > 1 && alpha_no_ > 0.0) {
+        if (corr > 0 && alpha_no_ > 0.0) {
             std::vector<Vec3> grad_T(n_cells, Vec3{0, 0, 0});
-            for (const auto& iface : internal_faces) {
-                double T_face = 0.5 * (T[iface.cell_P] + T[iface.cell_N]);
-                Vec3 d_PN = cell_centers[iface.cell_N] - cell_centers[iface.cell_P];
-                double dist = d_PN.norm();
-                Vec3 e_PN = (dist > 1e-15) ? (d_PN * (1.0 / dist)) : Vec3{0, 0, 1};
-                Vec3 S_vec = e_PN * (iface.area * iface.cos_theta) + iface.k_vec;
-                grad_T[iface.cell_P] = grad_T[iface.cell_P] + S_vec * T_face;
-                grad_T[iface.cell_N] = grad_T[iface.cell_N] - S_vec * T_face;
-            }
-            for (const auto& bface : boundary_faces) {
-                double T_face = T_exact(bface.center.x, bface.center.y, bface.center.z);
-                Vec3 S_b = bface.normal * bface.area;
-                grad_T[bface.cell_P] = grad_T[bface.cell_P] + S_b * T_face;
-            }
             for (int e = 0; e < n_cells; ++e) {
-                double v = mesh.elements[e].volume;
-                if (v > 1e-18) grad_T[e] = grad_T[e] * (1.0 / v);
+                if (!lsq_ok[e]) continue;
+                double r[3] = {0, 0, 0};
+                for (const auto& en : lsq[e]) {
+                    double T_nb = (en.kind == 0) ? T[en.idx] : T_exact(boundary_faces[en.idx].center.x, boundary_faces[en.idx].center.y, boundary_faces[en.idx].center.z);
+                    double dT = T_nb - T[e];
+                    r[0] += en.w * en.dx.x * dT; r[1] += en.w * en.dx.y * dT; r[2] += en.w * en.dx.z * dT;
+                }
+                const auto& I = inv_M[e];
+                grad_T[e] = Vec3{I[0]*r[0] + I[1]*r[1] + I[2]*r[2],
+                                 I[3]*r[0] + I[4]*r[1] + I[5]*r[2],
+                                 I[6]*r[0] + I[7]*r[1] + I[8]*r[2]};
             }
-            double alpha_no = alpha_no_;
             for (const auto& iface : internal_faces) {
                 Vec3 grad_f = (grad_T[iface.cell_P] + grad_T[iface.cell_N]) * 0.5;
                 double F_no = -prob_.k * iface.k_vec.dot(grad_f);
-                double F_lim = 0.3 * iface.a_PN * std::abs(T[iface.cell_P] - T[iface.cell_N]);
-                F_no = std::max(-F_lim, std::min(F_lim, F_no));
-                b_eff[iface.cell_P] -= alpha_no * F_no;
-                b_eff[iface.cell_N] += alpha_no * F_no;
+                if (limiter_ratio_ > 0.0) {
+                    double F_lim = limiter_ratio_ * iface.a_PN * std::abs(T[iface.cell_P] - T[iface.cell_N]);
+                    F_no = std::max(-F_lim, std::min(F_lim, F_no));
+                }
+                b_eff[iface.cell_P] -= alpha_no_ * F_no;
+                b_eff[iface.cell_N] += alpha_no_ * F_no;
             }
         }
+        std::vector<double> T_prev = T;
         auto sol_res = pcg_solve(A, b_eff, T, precond, p, "PCG-IC0");
         total_iters += sol_res.iterations;
         final_res = sol_res.final_rel_res;
         converged = sol_res.converged;
         quality_stats_.outer_residuals.push_back(sol_res.final_rel_res);
+
+        double dmax = 0.0;
+        for (int e = 0; e < n_cells; ++e) dmax = std::max(dmax, std::abs(T[e] - T_prev[e]));
+        if (corr > 0 && dmax < outer_tol_) break;
+        if (n_outer_ <= 1 || alpha_no_ <= 0.0) break;
     }
 
     auto t_sol_1 = Clock::now();
