@@ -1,7 +1,0 @@
-solver,quantity,phi_coarse,phi_medium,phi_fine,phi_finer_crosscheck,r21,r32,e21,e32,monotonic,observed_order_p,gci_fine_21,extrapolated_value,status,validity_reason
-FEM,T_max_C,60.5102,60.581,60.8302,60.8134,1.2844,1.251,0.2492,0.0708,True,N/A,not valid,N/A,NOT_VALID,Divergent differences: |e21| >= |e32|
-FEM,T_avg_vw_C,56.5685,56.5692,56.57,56.5704,1.2844,1.251,0.0008,0.0007,True,N/A,not valid,N/A,NOT_VALID,Divergent differences: |e21| >= |e32|
-FDM,T_max_C,59.8088,60.4034,60.3607,N/A,1.4979,1.9137,-0.0427,0.5946,False,N/A,not valid,N/A,NOT_VALID,Non-monotonic: oscillatory differences change sign
-FDM,T_avg_vw_C,55.9367,56.1549,56.1581,N/A,1.4979,1.9137,0.0032,0.2182,True,6.4094,not valid,56.1584 (unverified),NOT_VALID,"Apparent order p=6.41 outside valid range [0.5, 6.0]"
-FVM,T_max_C,60.6765,60.6601,60.777,N/A,1.3148,1.2506,0.1169,-0.0164,False,N/A,not valid,N/A,NOT_VALID,Non-monotonic: oscillatory differences change sign
-FVM,T_avg_vw_C,56.5819,56.5818,56.5791,N/A,1.3148,1.2506,-0.0027,-0.0001,True,N/A,not valid,N/A,NOT_VALID,Divergent differences: |e21| >= |e32|
