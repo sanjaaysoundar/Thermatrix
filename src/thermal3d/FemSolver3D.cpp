@@ -173,18 +173,24 @@ SolverResult FemSolver3D::solve(const FemMesh& mesh,
     }
 
     SparseCsr A = builder.finalise();
+    last_matrix_ = A;
+    double sym_err = check_symmetry(A);
     auto t_as_1 = Clock::now();
     result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
     result.n_nnz = A.nnz();
 
-    // Linear Solve: PCG with IC(0) / Jacobi or SSOR
+    // Linear Solve: PCG with IC(0) / Jacobi or SSOR (BiCGSTAB fallback if non-symmetric)
     std::vector<double> T(n, T_inf); // initial guess = T_inf
     SolverParams p = lparams;
     if (p.rel_tol <= 0.0) p.rel_tol = 1e-10;
 
     auto t_sol_0 = Clock::now();
     LinearSolveResult sol_res;
-    if (p.method == "PCG-Jacobi" || p.method == "Jacobi" || p.method == "jacobi") {
+    if (sym_err > 1e-6) {
+        std::cerr << "[WARNING] FEM matrix symmetry check failed (rel_err=" << sym_err << "), falling back to BiCGSTAB\n";
+        auto precond = make_jacobi_precond(A);
+        sol_res = bicgstab_solve(A, b, T, precond, p);
+    } else if (p.method == "PCG-Jacobi" || p.method == "Jacobi" || p.method == "jacobi") {
         auto precond = make_jacobi_precond(A);
         sol_res = pcg_solve(A, b, T, precond, p, "PCG-Jacobi");
     } else if (p.method == "SSOR" || p.method == "ssor") {

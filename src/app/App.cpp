@@ -622,11 +622,17 @@ void App::renderThermalView() {
         ImGui::BeginChild("##t3d_ctrl", {280.0f, panelH}, true);
         ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "3D Geometry & Physics");
         ImGui::Separator();
-        ImGui::TextDisabled("Object: Aluminium Heat Sink");
-        ImGui::TextDisabled("Base: 80x60x10 mm  Fins: 5x (80x2x30 mm)");
+        ImGui::TextDisabled("Base: 60x60x4 mm | Height: 29 mm");
         ImGui::TextDisabled("Material: Al 6061 (k = 167 W/mK)");
         ImGui::TextDisabled("Source: 10W on 10x10mm offset patch");
         ImGui::Spacing();
+
+        ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "3D Geometry Selection");
+        ImGui::RadioButton("9-Fin Heat Sink (Standard)", &t3d_geom_choice_, 0);
+        ImGui::RadioButton("Solid Cube (60x60x60 mm)",  &t3d_geom_choice_, 1);
+        ImGui::RadioButton("3-Fin Heat Sink",           &t3d_geom_choice_, 2);
+        ImGui::RadioButton("5-Fin Heat Sink",           &t3d_geom_choice_, 3);
+        ImGui::Separator();
 
         ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "Convection Environment");
         ImGui::RadioButton("Case A: h = 10 W/m²K (Natural)", &t3d_case_choice_, 0);
@@ -641,9 +647,13 @@ void App::renderThermalView() {
         ImGui::Separator();
 
         ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "Mesh Resolution");
-        ImGui::RadioButton("Coarse (~2.1k - 9.6k DOF)",  &t3d_res_choice_, 0);
-        ImGui::RadioButton("Medium (~13k - 72k DOF)",    &t3d_res_choice_, 1);
-        ImGui::RadioButton("Fine (~40k - 248k DOF)",     &t3d_res_choice_, 2);
+        ImGui::RadioButton("Coarse Level",  &t3d_res_choice_, 0);
+        ImGui::RadioButton("Medium Level",  &t3d_res_choice_, 1);
+        ImGui::RadioButton("Fine Level",    &t3d_res_choice_, 2);
+        ImGui::Separator();
+
+        ImGui::TextColored({0.4f, 0.8f, 1.0f, 1.0f}, "Visualization Options");
+        ImGui::Checkbox("Cut-Plane View (x = 30 mm)", &t3d_cut_plane_);
         ImGui::Separator();
 
         if (t3d_running_) {
@@ -781,14 +791,33 @@ void App::renderThermalView() {
             dl->AddQuad(p100, p110, p111, p101, edge, 1.0f);
         };
 
-        // Draw Base
-        draw_box(-0.040, 0.040, -0.030, 0.030, -0.015, -0.005, (t_lo + t_hi)*0.5);
+        // Render geometry based on selection
+        if (t3d_geom_choice_ == 1) {
+            // Solid Cube 60x60x60 mm
+            draw_box(-0.030, 0.030, -0.030, 0.030, -0.030, 0.030, (t_lo + t_hi)*0.5);
+        } else {
+            // Heat Sink Base (60x60x4 mm)
+            draw_box(-0.030, 0.030, -0.030, 0.030, -0.0145, -0.0105, (t_lo + t_hi)*0.5);
 
-        // Draw 5 Fins
-        double fin_y_offsets[5] = { -0.024, -0.012, 0.0, 0.012, 0.024 };
-        for (int f = 0; f < 5; ++f) {
-            double fy = fin_y_offsets[f];
-            draw_box(-0.040, 0.040, fy - 0.001, fy + 0.001, -0.005, 0.025, t_lo + 0.2*(t_hi - t_lo));
+            // Fins (height 25 mm)
+            int n_f = (t3d_geom_choice_ == 2) ? 3 : (t3d_geom_choice_ == 3) ? 5 : 9;
+            double pitch = (n_f == 3) ? 0.0150 : (n_f == 5) ? 0.0100 : 0.0060;
+            double y_start = -0.5 * (n_f - 1) * pitch;
+            for (int f = 0; f < n_f; ++f) {
+                double fy = y_start + f * pitch;
+                draw_box(-0.030, 0.030, fy - 0.0008, fy + 0.0008, -0.0105, 0.0145, t_lo + 0.3*(t_hi - t_lo));
+            }
+        }
+
+        // Cut-Plane View overlay at x = 30 mm (domain center x = 0.0)
+        if (t3d_cut_plane_) {
+            ImVec2 c0 = project3d(0.0f, -0.032f, -0.016f);
+            ImVec2 c1 = project3d(0.0f,  0.032f, -0.016f);
+            ImVec2 c2 = project3d(0.0f,  0.032f,  0.016f);
+            ImVec2 c3 = project3d(0.0f, -0.032f,  0.016f);
+            dl->AddQuadFilled(c0, c1, c2, c3, IM_COL32(255, 120, 20, 90));
+            dl->AddQuad(c0, c1, c2, c3, IM_COL32(255, 200, 50, 240), 2.0f);
+            dl->AddText({vp_pos.x + 15, vp_pos.y + 45}, IM_COL32(255, 200, 50, 255), "CUT PLANE: x = 30 mm (Y-Z Profile)");
         }
 
         // Colorbar legend
@@ -1347,23 +1376,51 @@ void App::startT3DWork() {
         if (t3d_res_choice_ == 1) mr = t3d::MeshResolution::Medium;
         else if (t3d_res_choice_ == 2) mr = t3d::MeshResolution::Fine;
 
+        t3d::HeatSinkParams hp;
+        std::string msh_file;
+        if (t3d_geom_choice_ == 1) { // Solid Cube
+            hp.base_length = 0.060; hp.base_width = 0.060; hp.base_height = 0.060;
+            hp.n_fins = 0; hp.fin_height = 0.0;
+            msh_file = (mr == t3d::MeshResolution::Coarse) ? "data/cube_coarse.msh" :
+                       (mr == t3d::MeshResolution::Medium) ? "data/cube_medium.msh" : "data/cube_fine.msh";
+        } else if (t3d_geom_choice_ == 2) { // 3 Fins
+            hp.n_fins = 3; hp.fin_pitch = 0.0150; hp.fin_y0 = 0.0150;
+            msh_file = "data/heatsink_3fins.msh";
+        } else if (t3d_geom_choice_ == 3) { // 5 Fins
+            hp.n_fins = 5; hp.fin_pitch = 0.0100; hp.fin_y0 = 0.0100;
+            msh_file = "data/heatsink_5fins.msh";
+        } else { // 9 Fins (standard)
+            msh_file = (mr == t3d::MeshResolution::Coarse) ? "data/heatsink_coarse.msh" :
+                       (mr == t3d::MeshResolution::Medium) ? "data/heatsink_medium.msh" : "data/heatsink_fine.msh";
+        }
+
+        t3d::HeatSinkGeometry geom(hp);
+        t3d::FemMesh mesh;
+        t3d::StructuredGrid3D grid;
+        if (std::filesystem::exists(msh_file)) {
+            mesh = t3d::load_msh_file(msh_file);
+        } else {
+            mesh = t3d::generate_fem_mesh(geom, mr);
+        }
+        grid = t3d::generate_structured_grid(geom, mr);
+
         std::vector<t3d::SolverResult> res_list;
         if (t3d_solver_choice_ == 0 || t3d_solver_choice_ == 3) {
             t3d::FemSolver3D fem(t3d_prob_);
-            res_list.push_back(fem.solve(cc, mr));
+            res_list.push_back(fem.solve(mesh, cc));
         }
         if (t3d_solver_choice_ == 1 || t3d_solver_choice_ == 3) {
             t3d::FdmSolver3D fdm(t3d_prob_);
-            res_list.push_back(fdm.solve(cc, mr));
+            res_list.push_back(fdm.solve(grid, cc));
         }
         if (t3d_solver_choice_ == 2 || t3d_solver_choice_ == 3) {
             t3d::FvmSolver3D fvm(t3d_prob_);
-            res_list.push_back(fvm.solve(cc, mr));
+            res_list.push_back(fvm.solve(mesh, cc));
         }
 
         t3d_results_ = std::move(res_list);
         t3d_running_ = false;
-        statusBar("3D Heat Sink simulation finished.");
+        statusBar("3D Simulation finished successfully.");
     });
 }
 

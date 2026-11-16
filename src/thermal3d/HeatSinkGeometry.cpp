@@ -1,8 +1,12 @@
 // HeatSinkGeometry.cpp  –  THERMATRIX Heat Sink CAD & Discretization Specification
 #include "HeatSinkGeometry.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
-#include <cmath>
+#include <map>
 #include <sstream>
 
 namespace thermatrix {
@@ -191,6 +195,122 @@ bool HeatSinkGeometry::export_stl(const std::string& filepath) const {
     }
     out << "endsolid HeatSink\n";
     return true;
+}
+
+WatertightnessReport check_stl_watertightness(const std::string& filepath, double expected_volume) {
+    WatertightnessReport rep;
+    std::ifstream in(filepath);
+    if (!in) {
+        in.clear();
+        in.open("../" + filepath);
+    }
+    if (!in) {
+        in.clear();
+        in.open("bin/" + filepath);
+    }
+    if (!in) {
+        in.clear();
+        in.open("../../" + filepath);
+    }
+    if (!in) {
+        rep.is_watertight = false;
+        return rep;
+    }
+
+    struct Pt {
+        int64_t x, y, z;
+        bool operator<(const Pt& o) const {
+            if (x != o.x) return x < o.x;
+            if (y != o.y) return y < o.y;
+            return z < o.z;
+        }
+    };
+    auto snap = [](double v) -> int64_t {
+        return static_cast<int64_t>(std::round(v * 1e7));
+    };
+
+    struct RealPt { double x, y, z; };
+    std::vector<RealPt> raw_nodes;
+    std::map<Pt, int> node_map;
+    auto get_node_id = [&](double x, double y, double z) -> int {
+        Pt key{snap(x), snap(y), snap(z)};
+        auto it = node_map.find(key);
+        if (it != node_map.end()) return it->second;
+        int id = static_cast<int>(raw_nodes.size());
+        raw_nodes.push_back({x, y, z});
+        node_map[key] = id;
+        return id;
+    };
+
+    std::vector<std::array<int, 3>> triangles;
+    std::string line;
+    std::vector<int> curr_tri;
+    while (std::getline(in, line)) {
+        std::istringstream iss(line);
+        std::string token;
+        if (!(iss >> token)) continue;
+        if (token == "vertex") {
+            double x, y, z;
+            if (iss >> x >> y >> z) {
+                curr_tri.push_back(get_node_id(x, y, z));
+                if (curr_tri.size() == 3) {
+                    triangles.push_back({curr_tri[0], curr_tri[1], curr_tri[2]});
+                    curr_tri.clear();
+                }
+            }
+        }
+    }
+
+    rep.n_triangles = static_cast<int>(triangles.size());
+    if (rep.n_triangles == 0) return rep;
+
+    std::map<std::pair<int, int>, int> edge_count;
+    std::map<std::pair<int, int>, int> dir_edges;
+    double vol = 0.0;
+
+    for (const auto& tri : triangles) {
+        const auto& p1 = raw_nodes[tri[0]];
+        const auto& p2 = raw_nodes[tri[1]];
+        const auto& p3 = raw_nodes[tri[2]];
+
+        double cross_x = p2.y * p3.z - p2.z * p3.y;
+        double cross_y = p2.z * p3.x - p2.x * p3.z;
+        double cross_z = p2.x * p3.y - p2.y * p3.x;
+        vol += (p1.x * cross_x + p1.y * cross_y + p1.z * cross_z) / 6.0;
+
+        for (int k = 0; k < 3; ++k) {
+            int u = tri[k];
+            int v = tri[(k + 1) % 3];
+            dir_edges[{u, v}]++;
+            int e1 = std::min(u, v);
+            int e2 = std::max(u, v);
+            edge_count[{e1, e2}]++;
+        }
+    }
+
+    rep.n_edges = static_cast<int>(edge_count.size());
+    rep.computed_volume = std::abs(vol);
+    if (expected_volume > 0.0) {
+        rep.volume_rel_error = std::abs(rep.computed_volume - expected_volume) / expected_volume;
+    }
+
+    int non_manifold = 0;
+    for (const auto& kv : edge_count) {
+        if (kv.second != 2) ++non_manifold;
+    }
+    rep.n_non_manifold_edges = non_manifold;
+
+    int inconsistent = 0;
+    for (const auto& kv : dir_edges) {
+        int opp = dir_edges[{kv.first.second, kv.first.first}];
+        if (opp != kv.second) ++inconsistent;
+    }
+    rep.n_inconsistent_orientations = inconsistent;
+
+    rep.is_watertight = (rep.n_non_manifold_edges == 0) &&
+                        (rep.n_triangles > 0) &&
+                        (rep.volume_rel_error < 0.005);
+    return rep;
 }
 
 } // namespace t3d

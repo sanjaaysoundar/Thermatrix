@@ -107,8 +107,10 @@ private:
     // -- 3D Thermal Suite (Assignment 2)
     int                  th_mode_{1}; // 0 = 1D Thermal, 1 = 3D Heat Sink (FEM/FDM/FVM)
     int                  t3d_solver_choice_{3}; // 0=FEM, 1=FDM, 2=FVM, 3=Compare All
+    int                  t3d_geom_choice_{0};   // 0=9-Fin Heat Sink, 1=Solid Cube, 2=3-Fin Heat Sink, 3=5-Fin Heat Sink
     int                  t3d_res_choice_{0}; // 0=Coarse, 1=Medium, 2=Fine
     int                  t3d_case_choice_{0}; // 0=Case A (h=10), 1=Case B (h=25)
+    bool                 t3d_cut_plane_{false}; // Cut-plane view toggle
     t3d::ThermalProblem  t3d_prob_;
     std::vector<t3d::SolverResult> t3d_results_;
     std::string          t3d_status_;

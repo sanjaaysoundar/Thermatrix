@@ -56,6 +56,12 @@ struct SparseCsr {
     double get(int row, int col) const noexcept;
 };
 
+// Relative symmetry check: returns max_{i,j} |A_ij - A_ji| / max(|A_ij|, |A_ji|)
+double check_symmetry(const SparseCsr& A);
+
+// Positive-diagonal check: returns true if all diagonal entries are strictly positive
+bool check_positive_diagonal(const SparseCsr& A, double* min_diag = nullptr);
+
 // ---------------------------------------------------------------------------
 // Builder: accumulate triplets, then call finalise()
 // ---------------------------------------------------------------------------

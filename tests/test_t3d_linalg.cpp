@@ -355,6 +355,62 @@ void test_solver_result_csv() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 11: check_symmetry and check_positive_diagonal
+// ---------------------------------------------------------------------------
+void test_check_symmetry_and_pos_diag() {
+    std::vector<double> b, x_exact;
+    SparseCsr A = make_laplacian_1d(10, b, x_exact);
+    double sym = check_symmetry(A);
+    ASSERT_NEAR(sym, 0.0, 1e-12, "check_symmetry returns 0 for Laplacian");
+    double min_d = 0.0;
+    bool pos = check_positive_diagonal(A, &min_d);
+    ASSERT_TRUE(pos, "check_positive_diagonal returns true for Laplacian");
+    ASSERT_TRUE(min_d > 0.0, "min diagonal is positive");
+
+    // Asymmetric matrix: perturb entry (0, 1)
+    SparseBuilder asym_bld(3, 3);
+    asym_bld.add(0, 0, 4.0); asym_bld.add(0, 1, 1.0); asym_bld.add(0, 2, 0.0);
+    asym_bld.add(1, 0, 2.0); asym_bld.add(1, 1, 5.0); asym_bld.add(1, 2, 1.0);
+    asym_bld.add(2, 0, 0.0); asym_bld.add(2, 1, 1.0); asym_bld.add(2, 2, 6.0);
+    SparseCsr A_asym = asym_bld.finalise();
+    double asym_err = check_symmetry(A_asym);
+    ASSERT_TRUE(asym_err > 0.1, "check_symmetry detects asymmetry correctly");
+}
+
+// ---------------------------------------------------------------------------
+// Test 12: BiCGSTAB linear solver
+// ---------------------------------------------------------------------------
+void test_bicgstab() {
+    int n = 20;
+    std::vector<double> b, x_exact;
+    SparseCsr A = make_laplacian_1d(n, b, x_exact);
+    int m = n - 1;
+    std::vector<double> x(m, 0.0);
+    auto precond = make_jacobi_precond(A);
+    SolverParams sp; sp.rel_tol = 1e-10; sp.max_iter = 1000;
+    LinearSolveResult res = bicgstab_solve(A, b, x, precond, sp);
+    ASSERT_TRUE(res.converged, "BiCGSTAB converged on 1D Laplacian");
+    ASSERT_TRUE(res.final_rel_res <= 1e-10, "BiCGSTAB final relative residual <= 1e-10");
+
+    double max_err = 0.0;
+    for (int i = 0; i < m; ++i) max_err = std::max(max_err, std::abs(x[i] - x_exact[i]));
+    ASSERT_TRUE(max_err < 1e-4, "BiCGSTAB solution matches exact solution");
+
+    // Test on non-symmetric system
+    SparseBuilder bld(2, 2);
+    bld.add(0, 0, 4.0); bld.add(0, 1, 1.0);
+    bld.add(1, 0, 2.0); bld.add(1, 1, 3.0);
+    SparseCsr A_ns = bld.finalise();
+    std::vector<double> b_ns = {5.0, 5.0}; // exact x = [1, 1]
+    std::vector<double> x_ns = {0.0, 0.0};
+    auto precond_ns = make_jacobi_precond(A_ns);
+    LinearSolveResult res_ns = bicgstab_solve(A_ns, b_ns, x_ns, precond_ns, sp);
+    ASSERT_TRUE(res_ns.converged, "BiCGSTAB converges on non-symmetric 2x2 system");
+    ASSERT_NEAR(x_ns[0], 1.0, 1e-8, "BiCGSTAB non-symmetric x[0] == 1");
+    ASSERT_NEAR(x_ns[1], 1.0, 1e-8, "BiCGSTAB non-symmetric x[1] == 1");
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 int main() {
@@ -389,6 +445,12 @@ int main() {
 
     std::cout << "\n--- Test 10: SolverResult CSV ---\n";
     test_solver_result_csv();
+
+    std::cout << "\n--- Test 11: Symmetry & Positive Diagonal ---\n";
+    test_check_symmetry_and_pos_diag();
+
+    std::cout << "\n--- Test 12: BiCGSTAB Solver ---\n";
+    test_bicgstab();
 
     std::cout << "\n========================================\n";
     std::cout << g_passed << " passed,  " << g_failed << " failed.\n";

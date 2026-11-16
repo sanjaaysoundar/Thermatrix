@@ -460,5 +460,136 @@ LinearSolveResult ssor_solve(const SparseCsr& A,
     return result;
 }
 
+// ---------------------------------------------------------------------------
+// BiCGSTAB
+// ---------------------------------------------------------------------------
+LinearSolveResult bicgstab_solve(const SparseCsr& A,
+                                 const std::vector<double>& b,
+                                 std::vector<double>& x,
+                                 const Preconditioner& precond,
+                                 const SolverParams& params)
+{
+    int n = A.nrows;
+    assert((int)b.size() == n);
+    if ((int)x.size() != n) x.assign(n, 0.0);
+
+    auto t0 = Clock::now();
+    LinearSolveResult result;
+    result.method = "BiCGSTAB";
+
+    double norm_b = norm2(b);
+    if (norm_b < 1e-300) {
+        x.assign(n, 0.0);
+        result.converged = true;
+        result.final_rel_res = 0.0;
+        return result;
+    }
+
+    std::vector<double> r(n);
+    compute_residual(A, b, x, r);
+    double res0 = norm2(r);
+    if (res0 / norm_b <= params.rel_tol) {
+        result.converged = true;
+        result.final_rel_res = res0 / norm_b;
+        return result;
+    }
+
+    std::vector<double> r0_hat = r;
+    std::vector<double> p = r;
+    std::vector<double> v(n, 0.0);
+    std::vector<double> p_hat(n, 0.0);
+    std::vector<double> s(n, 0.0);
+    std::vector<double> s_hat(n, 0.0);
+    std::vector<double> t(n, 0.0);
+
+    double rho = 1.0;
+    double alpha = 1.0;
+    double omega = 1.0;
+
+    for (int iter = 0; iter < params.max_iter; ++iter) {
+        double rho_new = dot(r0_hat, r);
+        if (std::abs(rho_new) < 1e-300) {
+            result.iterations = iter + 1;
+            result.final_rel_res = norm2(r) / norm_b;
+            break;
+        }
+
+        if (iter == 0) {
+            p = r;
+        } else {
+            double beta = (rho_new / rho) * (alpha / omega);
+            for (int i = 0; i < n; ++i) {
+                p[i] = r[i] + beta * (p[i] - omega * v[i]);
+            }
+        }
+
+        if (precond) precond(p, p_hat);
+        else p_hat = p;
+
+        A.spmv(p_hat, v);
+
+        double denom = dot(r0_hat, v);
+        if (std::abs(denom) < 1e-300) {
+            result.iterations = iter + 1;
+            result.final_rel_res = norm2(r) / norm_b;
+            break;
+        }
+        alpha = rho_new / denom;
+
+        for (int i = 0; i < n; ++i) s[i] = r[i] - alpha * v[i];
+
+        double norm_s = norm2(s);
+        if (norm_s / norm_b <= params.rel_tol) {
+            for (int i = 0; i < n; ++i) x[i] += alpha * p_hat[i];
+            result.converged = true;
+            result.iterations = iter + 1;
+            result.final_rel_res = norm_s / norm_b;
+            break;
+        }
+
+        if (precond) precond(s, s_hat);
+        else s_hat = s;
+
+        A.spmv(s_hat, t);
+
+        double tt = dot(t, t);
+        if (std::abs(tt) < 1e-300) {
+            omega = 0.0;
+        } else {
+            omega = dot(t, s) / tt;
+        }
+
+        for (int i = 0; i < n; ++i) {
+            x[i] += alpha * p_hat[i] + omega * s_hat[i];
+            r[i] = s[i] - omega * t[i];
+        }
+
+        rho = rho_new;
+
+        double rel_res = norm2(r) / norm_b;
+        if (rel_res <= params.rel_tol) {
+            result.converged = true;
+            result.iterations = iter + 1;
+            result.final_rel_res = rel_res;
+            break;
+        }
+
+        if (std::abs(omega) < 1e-300) {
+            result.iterations = iter + 1;
+            result.final_rel_res = rel_res;
+            break;
+        }
+
+        if (iter == params.max_iter - 1) {
+            result.iterations = iter + 1;
+            result.final_rel_res = rel_res;
+        }
+    }
+
+    auto t1 = Clock::now();
+    result.solve_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    return result;
+}
+
 } // namespace t3d
 } // namespace thermatrix

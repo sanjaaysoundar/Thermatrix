@@ -30,8 +30,12 @@ public:
                            const std::function<double(double, double, double)>& T_exact,
                            const SolverParams& lparams = SolverParams{});
 
+    // Access last assembled system matrix
+    const SparseCsr& last_matrix() const noexcept { return last_matrix_; }
+
 private:
     ThermalProblem prob_;
+    SparseCsr last_matrix_;
 };
 
 } // namespace t3d

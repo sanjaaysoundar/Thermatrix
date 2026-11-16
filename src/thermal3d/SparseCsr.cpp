@@ -84,6 +84,36 @@ bool SparseCsr::is_symmetric(double tol) const {
     return true;
 }
 
+double check_symmetry(const SparseCsr& A) {
+    if (A.nrows != A.ncols) return 1.0;
+    double max_rel_diff = 0.0;
+    for (int i = 0; i < A.nrows; ++i) {
+        for (int p = A.row_ptr[i]; p < A.row_ptr[i + 1]; ++p) {
+            int j = A.col_idx[p];
+            double v_ij = A.values[p];
+            double v_ji = A.get(j, i);
+            double diff = std::abs(v_ij - v_ji);
+            double denom = std::max(std::abs(v_ij), std::abs(v_ji));
+            if (denom > 1e-15) {
+                max_rel_diff = std::max(max_rel_diff, diff / denom);
+            }
+        }
+    }
+    return max_rel_diff;
+}
+
+bool check_positive_diagonal(const SparseCsr& A, double* min_diag) {
+    auto diag = A.diagonal();
+    if (diag.empty()) return false;
+    double m = diag[0];
+    for (double val : diag) {
+        if (val <= 0.0) return false;
+        if (val < m) m = val;
+    }
+    if (min_diag) *min_diag = m;
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Extract diagonal
 // ---------------------------------------------------------------------------

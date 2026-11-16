@@ -30,10 +30,46 @@ void test_geometry() {
     HeatSinkGeometry geom;
     double vol = geom.total_volume();
     // Base: 0.06*0.06*0.004 = 1.44e-5. Fins: 9 * (0.06*0.5*(0.002+0.0012)*0.025) = 2.16e-5. Total = 3.6e-5 m³
-    ASSERT_NEAR(vol, 3.6e-5, 1e-8, "Heat sink analytical volume = 3.6e-5 m³");
+    ASSERT_NEAR(vol, 3.600e-5, 3.6e-8, "Heat sink analytical volume = 3.600e-5 m³ (within 0.1%)");
+    ASSERT_TRUE(std::abs(vol - 3.600e-5) / 3.600e-5 <= 0.001, "Heat sink volume agreement within 0.1%");
 
     double a_conv = geom.total_exposed_area();
-    ASSERT_TRUE(a_conv > 0.025 && a_conv < 0.040, "Heat sink convective area in [0.025, 0.040] m²");
+    ASSERT_NEAR(a_conv, 3.1851e-2, 3.1851e-5, "Heat sink convective area = 3.1851e-2 m² (within 0.1%)");
+    ASSERT_TRUE(std::abs(a_conv - 3.1851e-2) / 3.1851e-2 <= 0.001, "Convective area agreement within 0.1%");
+
+    double a_src = geom.patch_area();
+    ASSERT_NEAR(a_src, 100e-6, 1e-7, "Source patch area = 100 mm² (1e-4 m²)");
+    ASSERT_TRUE(std::abs(a_src - 100e-6) / 100e-6 <= 0.001, "Source patch area agreement within 0.1%");
+
+    // Control body: 60x60x60 mm solid cube
+    HeatSinkParams cube_p;
+    cube_p.base_length = 0.060; cube_p.base_width = 0.060; cube_p.base_height = 0.060;
+    cube_p.n_fins = 0; cube_p.fin_height = 0.0;
+    HeatSinkGeometry cube_geom(cube_p);
+    double cube_vol = cube_geom.total_volume();
+    ASSERT_NEAR(cube_vol, 2.16e-4, 2.16e-7, "Solid cube volume = 2.16e-4 m³ (60x60x60 mm)");
+    double cube_conv = 5.0 * 0.060 * 0.060; // 5 exposed faces (bottom is adiabatic + 100 mm² patch)
+    ASSERT_NEAR(cube_conv, 1.8e-2, 1.8e-5, "Solid cube convective area = 1.8e-2 m²");
+
+    // Fin sweep: 3 fins and 5 fins
+    HeatSinkParams p3; p3.n_fins = 3; p3.fin_pitch = 0.0150; p3.fin_y0 = 0.0150;
+    HeatSinkGeometry g3(p3);
+    double vol3 = g3.total_volume();
+    ASSERT_NEAR(vol3, 1.44e-5 + 3.0 * (0.060 * 0.5 * (0.0020 + 0.0012) * 0.025), 1e-8, "3-fin heat sink volume matches analytical");
+
+    HeatSinkParams p5; p5.n_fins = 5; p5.fin_pitch = 0.0100; p5.fin_y0 = 0.0100;
+    HeatSinkGeometry g5(p5);
+    double vol5 = g5.total_volume();
+    ASSERT_NEAR(vol5, 1.44e-5 + 5.0 * (0.060 * 0.5 * (0.0020 + 0.0012) * 0.025), 1e-8, "5-fin heat sink volume matches analytical");
+
+    // Watertightness checks on STL files
+    WatertightnessReport rep_hs = check_stl_watertightness("data/heatsink.stl", 3.600e-5);
+    ASSERT_TRUE(rep_hs.is_watertight, "Heat sink STL (data/heatsink.stl) is watertight");
+    ASSERT_TRUE(rep_hs.n_non_manifold_edges == 0, "Heat sink STL has 0 non-manifold edges");
+
+    WatertightnessReport rep_cube = check_stl_watertightness("data/cube.stl", 2.160e-4);
+    ASSERT_TRUE(rep_cube.is_watertight, "Cube STL (data/cube.stl) is watertight");
+    ASSERT_TRUE(rep_cube.n_non_manifold_edges == 0, "Cube STL has 0 non-manifold edges");
 
     // Point in base
     ASSERT_TRUE(geom.is_in_solid(0.030, 0.030, 0.002), "Point inside base slab is solid");
@@ -87,6 +123,12 @@ void test_fem_solve() {
     ASSERT_TRUE(rA.T_min >= 25.0, "FEM T_min >= T_inf (25 °C)");
     ASSERT_TRUE(rA.Q_balance_rel < 0.03, "FEM Case A energy balance error < 3%");
 
+    // Linear algebra assertions (Phase 5)
+    ASSERT_NEAR(check_symmetry(solver.last_matrix()), 0.0, 1e-12, "FEM matrix is strictly symmetric (rel symmetry error = 0)");
+    double min_d_fem = 0.0;
+    ASSERT_TRUE(check_positive_diagonal(solver.last_matrix(), &min_d_fem), "FEM matrix has strictly positive diagonal");
+    ASSERT_TRUE(min_d_fem > 0.0, "FEM min diagonal > 0 (SPD system)");
+
     // Case B: h = 25 W/m²K
     SolverResult rB = solver.solve(ConvCase::B, MeshResolution::Coarse);
     ASSERT_TRUE(rB.success, "FEM solve Case B succeeds");
@@ -105,6 +147,12 @@ void test_fdm_solve() {
     ASSERT_TRUE(rA.T_min >= 25.0, "FDM T_min >= T_inf (25 °C)");
     ASSERT_TRUE(rA.Q_balance_rel < 0.03, "FDM Case A energy balance error < 3%");
 
+    // Linear algebra assertions (Phase 5)
+    ASSERT_NEAR(check_symmetry(solver.last_matrix()), 0.0, 1e-12, "FDM matrix is strictly symmetric (rel symmetry error = 0)");
+    double min_d_fdm = 0.0;
+    ASSERT_TRUE(check_positive_diagonal(solver.last_matrix(), &min_d_fdm), "FDM matrix has strictly positive diagonal");
+    ASSERT_TRUE(min_d_fdm > 0.0, "FDM min diagonal > 0 (SPD system)");
+
     SolverResult rB = solver.solve(ConvCase::B, MeshResolution::Coarse);
     ASSERT_TRUE(rB.success, "FDM solve Case B succeeds");
     ASSERT_TRUE(rB.T_max < rA.T_max, "FDM: Case B peak temperature < Case A");
@@ -121,6 +169,12 @@ void test_fvm_solve() {
     ASSERT_TRUE(rA.T_max > 30.0 && rA.T_max < 90.0, "FVM T_max is physically realistic");
     ASSERT_TRUE(rA.T_min >= 25.0, "FVM T_min >= T_inf (25 °C)");
     ASSERT_TRUE(rA.Q_balance_rel < 0.01, "FVM Case A energy balance error < 1% (exact conservation)");
+
+    // Linear algebra assertions (Phase 5)
+    ASSERT_NEAR(check_symmetry(solver.last_matrix()), 0.0, 1e-12, "FVM matrix is strictly symmetric (implicit orthogonal conductances)");
+    double min_d_fvm = 0.0;
+    ASSERT_TRUE(check_positive_diagonal(solver.last_matrix(), &min_d_fvm), "FVM matrix has strictly positive diagonal");
+    ASSERT_TRUE(min_d_fvm > 0.0, "FVM min diagonal > 0 (SPD system)");
 
     MeshQualityStats stats = solver.last_quality_stats();
     std::cout << "  FVM Mesh Quality Telemetry:\n"

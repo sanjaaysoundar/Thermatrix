@@ -1,6 +1,12 @@
 #pragma once
 // FdmSolver3D.h  –  THERMATRIX 3D Thermal Finite Difference Method Solver
 // namespace thermatrix::t3d
+//
+// METHODOLOGICAL DISCLOSURE:
+// On a uniform Cartesian grid, this 7-point voxel formulation is algebraically identical
+// to a cell-centred finite-volume scheme with orthogonal planar faces. Its distinguishing
+// numerical characteristics are the structured grid layout, Cartesian coordinate alignment,
+// and the staircase (voxelized) boundary approximation of non-axis-aligned geometric features.
 
 #include "ThermalProblem.h"
 #include "Mesh3D.h"
@@ -30,8 +36,12 @@ public:
                            const std::function<double(double, double, double)>& T_exact,
                            const SolverParams& lparams = SolverParams{});
 
+    // Access last assembled system matrix
+    const SparseCsr& last_matrix() const noexcept { return last_matrix_; }
+
 private:
     ThermalProblem prob_;
+    SparseCsr last_matrix_;
 };
 
 } // namespace t3d

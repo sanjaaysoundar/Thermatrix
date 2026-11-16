@@ -61,5 +61,20 @@ private:
     HeatSinkParams params_;
 };
 
+struct WatertightnessReport {
+    bool is_watertight { false };
+    int n_triangles { 0 };
+    int n_edges { 0 };
+    int n_non_manifold_edges { 0 };
+    int n_inconsistent_orientations { 0 };
+    double computed_volume { 0.0 };
+    double volume_rel_error { 0.0 };
+};
+
+// Verify watertightness of an STL file:
+// checks that every edge is shared by exactly two triangles,
+// orientation is consistent, and closed volume matches expected volume.
+WatertightnessReport check_stl_watertightness(const std::string& filepath, double expected_volume);
+
 } // namespace t3d
 } // namespace thermatrix

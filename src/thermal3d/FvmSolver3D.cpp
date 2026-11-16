@@ -268,6 +268,7 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
     }
 
     SparseCsr A = builder.finalise();
+    last_matrix_ = A;
     auto t_as_1 = Clock::now();
     result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
     result.n_nnz = A.nnz();
@@ -411,7 +412,9 @@ SolverResult FvmSolver3D::solve(const FemMesh& mesh,
 
         std::vector<double> T_prev = T;
         LinearSolveResult sol_res;
-        if (method_name == "SSOR") {
+        if (quality_stats_.symmetry_norm > 1e-6) {
+            sol_res = bicgstab_solve(A, b_eff, T, precond, p);
+        } else if (method_name == "SSOR") {
             sol_res = ssor_solve(A, b_eff, T, p);
         } else {
             sol_res = pcg_solve(A, b_eff, T, precond, p, method_name);
@@ -610,6 +613,7 @@ SolverResult FvmSolver3D::solve_mms(
     }
 
     SparseCsr A = builder.finalise();
+    last_matrix_ = A;
     auto t_as_1 = Clock::now();
     result.t_assemble_ms = std::chrono::duration<double, std::milli>(t_as_1 - t_as_0).count();
     result.n_nnz = A.nnz();

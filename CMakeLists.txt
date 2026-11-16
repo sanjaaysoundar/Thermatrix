@@ -166,6 +166,10 @@ add_executable(run_t3d_benchmark tests/run_t3d_benchmark.cpp)
 target_include_directories(run_t3d_benchmark PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(run_t3d_benchmark PRIVATE thermatrix_t3d)
 
+add_executable(thermatrix_bench tests/run_t3d_benchmark.cpp)
+target_include_directories(thermatrix_bench PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(thermatrix_bench PRIVATE thermatrix_t3d)
+
 add_executable(verify_r4_slab tests/verify_r4_slab.cpp)
 target_include_directories(verify_r4_slab PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(verify_r4_slab PRIVATE thermatrix_t3d)

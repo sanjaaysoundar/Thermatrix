@@ -60,9 +60,13 @@ public:
     // Mesh non-orthogonality telemetry
     MeshQualityStats last_quality_stats() const noexcept { return quality_stats_; }
 
+    // Access last assembled system matrix (implicit orthogonal part)
+    const SparseCsr& last_matrix() const noexcept { return last_matrix_; }
+
 private:
     ThermalProblem prob_;
     MeshQualityStats quality_stats_;
+    SparseCsr last_matrix_;
     int n_outer_ { 40 };
     double alpha_no_ { 1.0 };
     double limiter_ratio_ { 0.0 };

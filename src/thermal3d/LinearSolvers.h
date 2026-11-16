@@ -92,5 +92,16 @@ LinearSolveResult ssor_solve(const SparseCsr& A,
                               std::vector<double>& x,
                               const SolverParams& params = {});
 
+// ---------------------------------------------------------------------------
+// BiCGSTAB  (Biconjugate Gradient Stabilized)
+//   Solves non-symmetric or symmetric linear systems A x = b.
+//   Used as a documented fallback when matrix symmetry check fails.
+// ---------------------------------------------------------------------------
+LinearSolveResult bicgstab_solve(const SparseCsr& A,
+                                 const std::vector<double>& b,
+                                 std::vector<double>& x,
+                                 const Preconditioner& precond,
+                                 const SolverParams& params = {});
+
 } // namespace t3d
 } // namespace thermatrix
