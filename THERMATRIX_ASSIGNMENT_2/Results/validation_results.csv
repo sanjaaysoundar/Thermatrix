@@ -4,13 +4,13 @@ Consensus_Tmax,CrossCheck_Finer_FEM,FEM_Finer,60.8134,,,NaN,60.8134 C (separate 
 Consensus_Tavg,SingleMethod_Extrapolation,FDM,nan,56.1584,nan,NaN,56.1584 C (single-method FDM extrap; consensus UNAVAILABLE),single-method,INFO
 Consensus_Tavg,CrossCheck_Finer_FEM,FEM_Finer,56.5704,,,NaN,56.5704 C (separate cross-check),cross-check only,INFO
 Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FDM,0.415642,,,0.0,0.415642 C,< 3.0 C,PASS
-Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FVM,0.249764,,,0.0,0.249764 C,< 3.0 C,PASS
-Pairwise_RMSE,Fine_Level_Comparison,FDM_vs_FVM,0.545928,,,0.0,0.545928 C,< 3.0 C,PASS
+Pairwise_RMSE,Fine_Level_Comparison,FEM_vs_FVM,0.0964368,,,0.0,0.0964368 C,< 3.0 C,PASS
+Pairwise_RMSE,Fine_Level_Comparison,FDM_vs_FVM,0.449092,,,0.0,0.449092 C,< 3.0 C,PASS
 Probe_Consensus_RMSE,Full_30_Probe_Consensus,FEM_FDM_FVM,NaN,,,NaN,UNAVAILABLE (only 1 of 30 probes has 3-way consensus),requires 30-probe consensus,UNAVAILABLE
-Single_Probe_Consensus,SinglePoint_Probe18_Only,FEM (barycentric),0.103101,,,0.0,0.103101 C (1-point result: Probe 18 only),< 2.0 C,PASS
-Single_Probe_Consensus,SinglePoint_Probe18_Only,FDM (trilinear),0.305658,,,0.0,0.305658 C (1-point result: Probe 18 only),< 2.5 C,PASS
-Single_Probe_Consensus,SinglePoint_Probe18_Only,FVM (cell+Green-Gauss),0.193994,,,0.0,0.193994 C (1-point result: Probe 18 only),< 2.0 C,PASS
-Single_Probe_Consensus,CrossCheck_Probe18_Only,FEM_Finer (barycentric),0.102999,,,0.0,0.102999 C (1-point result: Probe 18 only),< 2.0 C,PASS
+Single_Probe_Consensus,SinglePoint_Probe18_Only,FEM (barycentric),0.112481,,,0.0,0.112481 C (1-point result: Probe 18 only),< 2.0 C,PASS
+Single_Probe_Consensus,SinglePoint_Probe18_Only,FDM (trilinear),0.264888,,,0.0,0.264888 C (1-point result: Probe 18 only),< 2.5 C,PASS
+Single_Probe_Consensus,SinglePoint_Probe18_Only,FVM (cell+Green-Gauss),0.185723,,,0.0,0.185723 C (1-point result: Probe 18 only),< 2.0 C,PASS
+Single_Probe_Consensus,CrossCheck_Probe18_Only,FEM_Finer (barycentric),0.116773,,,0.0,0.116773 C (1-point result: Probe 18 only),< 2.0 C,PASS
 1D_Slab,L2_Relative_Error,FEM,1.49337e-11,,,0.0,1.49337e-09%,< 1.0%,PASS
 1D_Slab,L2_Relative_Error,FDM,5.38737e-11,,,0.0,5.38737e-09%,< 1.0%,PASS
 1D_Slab,L2_Relative_Error,FVM,0.00979424,,,0.0,0.979424%,< 2.0%,PASS
@@ -22,44 +22,44 @@ Single_Probe_Consensus,CrossCheck_Probe18_Only,FEM_Finer (barycentric),0.102999,
 1D_Slab,Max_Absolute_Error_K,FVM,0.684693,,,0.0,0.684693 K,< 1.0 K,PASS
 MMS_L2_Error,Actual_L2_Error,FEM,0.0059732,0.00191059,0.000531189,0.0,1.84672 (order),p >= 1.5,PASS
 MMS_L2_Error,Actual_L2_Error,FDM,0.162993,0.0555371,0.0152713,0.0,1.86263 (order),p >= 1.5,PASS
-MMS_L2_Error,Actual_L2_Error,FVM,1.21848,0.701632,0.384721,0.0,0.866903 (order),p >= 0.75,PASS
+MMS_L2_Error,Actual_L2_Error,FVM,0.658879,0.346873,0.176798,0.0,0.972306 (order),p >= 0.75,PASS
 MMS_Linf_Error,Actual_Linf_Error,FEM,0.0193015,0.00514854,0.00130972,0.0,1.84672 (order),p >= 1.5,PASS
 MMS_Linf_Error,Actual_Linf_Error,FDM,0.3467,0.14165,0.0410957,0.0,1.86263 (order),p >= 1.5,PASS
-MMS_Linf_Error,Actual_Linf_Error,FVM,3.45879,2.13213,1.20519,0.0,0.866903 (order),p >= 0.75,PASS
+MMS_Linf_Error,Actual_Linf_Error,FVM,1.9063,1.07964,0.613691,0.0,0.972306 (order),p >= 0.75,PASS
 MMS_Order,Observed_Order_p,FEM,1.84672,,,2.0,1.84672,p >= 1.5,PASS
 MMS_Order,Observed_Order_p,FDM,1.86263,,,2.0,1.86263,p >= 1.5,PASS
-MMS_Order,Observed_Order_p,FVM,0.866903,,,1.0,0.866903,p >= 0.75,PASS
+MMS_Order,Observed_Order_p,FVM,0.972306,,,1.0,0.972306,p >= 0.75,PASS
 GCI,T_max,FEM,60.5102,60.581,60.8302,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC
 GCI,T_avg,FEM,56.5685,56.5692,56.57,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC
 GCI,T_max,FDM,59.8088,60.4034,60.3607,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC
 GCI,T_avg,FDM,55.9367,56.1549,56.1581,56.1584,0.000569341% (p=6.423180),monotonic AND 0 < GCI < 10%,PASS
-GCI,T_max,FVM,61.5916,62.0781,61.2329,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC
-GCI,T_avg,FVM,56.5759,56.5851,56.6084,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC
+GCI,T_max,FVM,60.6765,60.6601,60.777,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC
+GCI,T_avg,FVM,56.5819,56.5818,56.5791,nan,nan% (p=N/A (non-monotonic)),requires |e21|<|e32| same sign,NON-MONOTONIC
 Probe_Sampling_Methods,FEM,barycentric_interpolation,,,,,,documented,INFO
 Probe_Sampling_Methods,FDM,trilinear_interpolation_(nearest_solid_near_staircase),,,,,,documented,INFO
 Probe_Sampling_Methods,FVM,cell_value_plus_Green-Gauss_gradient_correction,,,,,,documented,INFO
 Probe_Points,Probe_1,Extrap_Consensus,56.0731,55.6405,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_2,Extrap_Consensus,55.5435,55.1279,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_3,Extrap_Consensus,57.4376,57.0026,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
-Probe_Points,Probe_4,Extrap_Consensus,nan,55.9635,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_4,Extrap_Consensus,nan,55.9635,56.3928,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_5,Extrap_Consensus,55.8724,55.4455,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
-Probe_Points,Probe_6,Extrap_Consensus,57.6929,57.3244,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_6,Extrap_Consensus,57.6929,57.3244,57.7061,57.5745,0.381665 C spread,< 5.0 C spread,PASS
 Probe_Points,Probe_7,Extrap_Consensus,nan,55.784,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
-Probe_Points,Probe_8,Extrap_Consensus,nan,56.6623,57.2772,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_8,Extrap_Consensus,nan,56.6623,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_9,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_10,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_11,Extrap_Consensus,nan,58.9245,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
-Probe_Points,Probe_12,Extrap_Consensus,nan,58.8896,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_12,Extrap_Consensus,nan,58.8896,59.3893,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_13,Extrap_Consensus,nan,55.5482,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_14,Extrap_Consensus,nan,55.1721,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_15,Extrap_Consensus,58.406,58.0273,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
-Probe_Points,Probe_16,Extrap_Consensus,nan,56.0464,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_16,Extrap_Consensus,nan,56.0464,56.4738,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_17,Extrap_Consensus,nan,56.9306,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
-Probe_Points,Probe_18,Extrap_Consensus,56.5128,56.1082,56.606,56.409,0.497778 C spread,< 5.0 C spread,PASS
+Probe_Points,Probe_18,Extrap_Consensus,56.5128,56.1082,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_19,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_20,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_21,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
-Probe_Points,Probe_22,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
+Probe_Points,Probe_22,Extrap_Consensus,nan,nan,56.3415,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_23,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_24,Extrap_Consensus,nan,nan,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
 Probe_Points,Probe_25,Extrap_Consensus,nan,54.6719,nan,NaN,UNAVAILABLE (non-monotonic extrapolation),consensus unavailable,NO_CONSENSUS
